@@ -1,11 +1,12 @@
 import { type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
-import type { CreateCardInput, PhotoSpec } from "@/lib/types";
+import type { CreateCardInput, PhotoSpec, AspectId } from "@/lib/types";
 import { THEMES } from "@/engine/themes";
 
 export const maxDuration = 30;
 
-const ID_RE = /^[a-z0-9]{8,32}$/;
+const ID_RE = /^[a-z0-9][a-z0-9-]{5,63}$/;
+const ASPECTS: AspectId[] = ["9:16", "1:1", "16:9"];
 
 export async function POST(req: NextRequest) {
   let body: Partial<CreateCardInput>;
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
   const message = String(body.message ?? "").trim().slice(0, 600);
   const templateId = String(body.templateId ?? "");
   if (!THEMES[templateId as keyof typeof THEMES]) errors.push("Invalid templateId");
+  const aspect: AspectId = ASPECTS.includes(body.aspect as AspectId) ? (body.aspect as AspectId) : "9:16";
 
   const photos: PhotoSpec[] = (Array.isArray(body.photos) ? body.photos : [])
     .slice(0, 12)
@@ -41,20 +43,23 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = supabaseServer();
+  const { data: existing } = await supabase.from("cards").select("id").eq("id", id).maybeSingle();
+  if (existing) {
+    return Response.json({ error: "id_taken" }, { status: 409 });
+  }
+
   const { data, error } = await supabase
     .from("cards")
-    .upsert(
-      {
-        id,
-        sender_name: senderName || "Your Brother",
-        recipient_name: recipientName,
-        message,
-        template_id: templateId,
-        photos,
-        audio_enabled: false,
-      },
-      { onConflict: "id" },
-    )
+    .insert({
+      id,
+      sender_name: senderName || "Your Brother",
+      recipient_name: recipientName,
+      message,
+      template_id: templateId,
+      aspect,
+      photos,
+      audio_enabled: false,
+    })
     .select("id, created_at")
     .single();
 

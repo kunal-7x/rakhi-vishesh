@@ -5,7 +5,7 @@ export const maxDuration = 30;
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  if (!id || !/^[a-z0-9]{8,32}$/.test(id)) {
+  if (!id || !/^[a-z0-9][a-z0-9-]{5,63}$/.test(id)) {
     return Response.json({ error: "Invalid id" }, { status: 400 });
   }
   const supabase = supabaseServer();

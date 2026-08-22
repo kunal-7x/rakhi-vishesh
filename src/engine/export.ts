@@ -1,12 +1,11 @@
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
-import type { CardData } from "./types";
+import type { CardData, AspectId } from "./types";
 import { RakhiRenderer, imageCache, preloadImage } from "./scenes";
 
 export type ExportRes = "720" | "1080";
 
 export interface ExportOptions {
-  width: number;
-  height: number;
+  aspect: AspectId;
   fps: number;
   quality: ExportRes;
   onProgress: (pct: number) => void;
@@ -15,6 +14,18 @@ export interface ExportOptions {
 export interface ExportResult {
   blob: Blob;
   ext: "mp4" | "webm";
+}
+
+const DIMS: Record<AspectId, { w: number; h: number }> = {
+  "9:16": { w: 1080, h: 1920 },
+  "1:1": { w: 1080, h: 1080 },
+  "16:9": { w: 1920, h: 1080 },
+};
+
+export function dimsFor(aspect: AspectId, quality: ExportRes): { w: number; h: number } {
+  const base = DIMS[aspect];
+  const q = quality === "1080" ? 1 : 0.666;
+  return { w: Math.round(base.w * q), h: Math.round(base.h * q) };
 }
 
 export function canWebCodecs(): boolean {
@@ -56,11 +67,12 @@ function makeCanvas(w: number, h: number): HTMLCanvasElement {
 }
 
 async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<ExportResult> {
-  const { width, height, fps } = opts;
-  const canvas = makeCanvas(width, height);
+  const { w, h } = dimsFor(opts.aspect, opts.quality);
+  const { fps } = opts;
+  const canvas = makeCanvas(w, h);
   const ctx = canvas.getContext("2d")!;
   const renderer = new RakhiRenderer(card);
-  const totalSec = renderer.timelineInfo.total + 0.8;
+  const totalSec = renderer.timelineInfo.total;
   const totalFrames = Math.ceil(totalSec * fps);
 
   await loadImages(card);
@@ -68,7 +80,7 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
 
   const muxer = new Muxer({
     target: new ArrayBufferTarget(),
-    video: { codec: "avc", width, height },
+    video: { codec: "avc", width: w, height: h },
     fastStart: "in-memory",
   });
 
@@ -82,18 +94,18 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
   });
 
   const bitrate = opts.quality === "1080" ? 8_000_000 : 4_500_000;
-  const tryCodecs = ["avc1.42003f", "avc1.42E01E", "avc1.640028", "avc1.4D401E", "avc1.64001F"];
+  const tryCodecs = ["avc1.640028", "avc1.42E01E", "avc1.42003f", "avc1.4D401E"];
   for (const codec of tryCodecs) {
     try {
-      encoder.configure({ codec, width, height, bitrate, framerate: fps });
+      encoder.configure({ codec, width: w, height: h, bitrate, framerate: fps });
       break;
     } catch {
-      // next codec
+      // try next codec
     }
   }
 
   const renderFrame = (sec: number) => {
-    renderer.render(ctx, { t: Math.min(sec, totalSec - 0.001), images: imageCache, fontReady: true });
+    renderer.render(ctx, { t: sec, images: imageCache, fontReady: true, phase: "export" });
   };
 
   for (let f = 0; f < totalFrames; f++) {
@@ -117,11 +129,12 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
 }
 
 async function exportMediaRecorder(card: CardData, opts: ExportOptions, mime: string): Promise<ExportResult> {
-  const { width, height, fps } = opts;
-  const canvas = makeCanvas(width, height);
+  const { w, h } = dimsFor(opts.aspect, opts.quality);
+  const { fps } = opts;
+  const canvas = makeCanvas(w, h);
   const ctx = canvas.getContext("2d")!;
   const renderer = new RakhiRenderer(card);
-  const totalSec = renderer.timelineInfo.total + 0.8;
+  const totalSec = renderer.timelineInfo.total;
 
   await loadImages(card);
   await document.fonts?.ready?.catch?.(() => undefined);
@@ -132,8 +145,8 @@ async function exportMediaRecorder(card: CardData, opts: ExportOptions, mime: st
   mr.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
   };
-  const done = new Promise<void>((res) => {
-    mr.onstop = () => res();
+  const done = new Promise<void>((resolve) => {
+    mr.onstop = () => resolve();
   });
   mr.start(500);
   const start = performance.now();
@@ -144,7 +157,7 @@ async function exportMediaRecorder(card: CardData, opts: ExportOptions, mime: st
         resolve();
         return;
       }
-      renderer.render(ctx, { t: Math.min(sec, totalSec - 0.001), images: imageCache, fontReady: true });
+      renderer.render(ctx, { t: sec, images: imageCache, fontReady: true, phase: "export" });
       opts.onProgress(Math.round((sec / totalSec) * 100));
       requestAnimationFrame(loop);
     };

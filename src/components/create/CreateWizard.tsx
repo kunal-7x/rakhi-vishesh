@@ -16,6 +16,23 @@ const STEPS = ["Theme", "Names", "Message", "Photos", "Preview"] as const;
 const MAX_NAME = 40;
 const MAX_MESSAGE = 600;
 
+const ASPECTS: { id: CardData["aspect"]; label: string; icon: string }[] = [
+  { id: "9:16", label: "Reel 9:16", icon: "📱" },
+  { id: "1:1", label: "Square 1:1", icon: "⬛" },
+  { id: "16:9", label: "Wide 16:9", icon: "🖥️" },
+];
+
+function slugify(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32) || "c" + Math.floor(Math.random() * 1e6).toString(10)
+  );
+}
+
 interface CreateWizardProps {
   initialTheme?: ThemeId | null;
 }
@@ -28,11 +45,17 @@ export default function CreateWizard({ initialTheme }: CreateWizardProps) {
   const [senderName, setSenderName] = useState("");
   const [message, setMessage] = useState("");
   const [photos, setPhotos] = useState<PhotoSpec[]>([]);
+  const [aspect, setAspect] = useState<CardData["aspect"]>("9:16");
+  const [cleanLink, setCleanLink] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   const recipientOk = recipientName.trim().length > 0;
   const canProceed = step !== 1 || recipientOk;
+  const slugHint =
+    recipientName.trim() && senderName.trim()
+      ? `${slugify(senderName)}-from-${slugify(recipientName)}`
+      : "your-link-will-look-like: /r/sender-from-recipient";
 
   const previewCard: CardData = {
     id: "preview",
@@ -41,6 +64,7 @@ export default function CreateWizard({ initialTheme }: CreateWizardProps) {
     message,
     templateId,
     photos,
+    aspect,
   };
 
   function goTo(i: number) {
@@ -54,30 +78,42 @@ export default function CreateWizard({ initialTheme }: CreateWizardProps) {
     setError(null);
     setCreating(true);
     try {
-      const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toLowerCase();
-      const photosOut: PhotoSpec[] = [];
-      for (const p of photos) {
-        if (p.url.startsWith("https://")) {
-          photosOut.push(p);
+      const base = `${slugify(senderName.trim() || "brother")}-from-${slugify(recipientName.trim())}`.slice(0, 48);
+      let id = base;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const photosOut: PhotoSpec[] = [];
+        for (const p of photos) {
+          if (p.url.startsWith("https://")) {
+            photosOut.push(p);
+            continue;
+          }
+          photosOut.push({ ...p, url: await uploadPhoto(p.url) });
+        }
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id,
+            senderName: senderName.trim(),
+            recipientName: recipientName.trim(),
+            message,
+            templateId,
+            aspect,
+            photos: photosOut,
+          } satisfies CardData & { aspect: CardData["aspect"] }),
+        });
+        if (res.status === 200) {
+          router.push(cleanLink ? `/r/${id}?clean=1&created=1` : `/r/${id}?created=1`);
+          return;
+        }
+        if (res.status === 409) {
+          id = `${base}-${attempt + 2}`.slice(0, 48);
           continue;
         }
-        photosOut.push({ ...p, url: await uploadPhoto(p.url) });
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not create card. Please try again.");
       }
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id,
-          senderName: senderName.trim(),
-          recipientName: recipientName.trim(),
-          message,
-          templateId,
-          photos: photosOut,
-        } satisfies CardData),
-      });
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) throw new Error(data?.error ?? "Could not create card. Please try again.");
-      router.push(`/r/${id}?created=1`);
+      throw new Error("That link name is taken. Try a slightly different pair of names.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       setCreating(false);
@@ -182,9 +218,38 @@ export default function CreateWizard({ initialTheme }: CreateWizardProps) {
 
             {step === 4 && (
               <div className="flex flex-col items-center gap-6">
-                <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-2xl border border-amber-200/15 shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
-                  <CardPlayer card={previewCard} />
+                <div className="flex items-center gap-1 rounded-xl border border-amber-200/15 bg-black/25 p-1" role="group" aria-label="Aspect ratio">
+                  {ASPECTS.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setAspect(a.id)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                        aspect === a.id ? "bg-[#ffd97a]/20 text-[#ffd97a]" : "text-[#ffd9a0]/60 hover:text-[#ffd9a0]"
+                      }`}
+                    >
+                      {a.icon} {a.label}
+                    </button>
+                  ))}
                 </div>
+                <div className="mx-auto w-full max-w-[340px] overflow-hidden rounded-2xl border border-amber-200/15 shadow-[0_8px_40px_rgba(0,0,0,0.45)]" style={{ aspectRatio: aspect?.replace(":", "/") }}>
+                  <CardPlayer card={previewCard} aspect={aspect} />
+                </div>
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-amber-200/15 bg-black/25 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={cleanLink}
+                    onChange={(e) => setCleanLink(e.target.checked)}
+                    className="h-4 w-4 accent-[#ff9d2e]"
+                  />
+                  <span className="text-sm text-[#fff6e9]">
+                    <strong className="text-[#ffd97a]">Clean link</strong>{" "}
+                    <span className="text-[#ffd9a0]/70">— your sister sees ONLY the magic card (no buttons, no ads, no tools)</span>
+                  </span>
+                </label>
+                <p className="text-center text-xs text-[#ffd9a0]/60">
+                  Your link: <span className="font-mono text-[#ffd97a]/80">/r/{slugHint}</span>
+                </p>
                 <p className="text-center text-sm text-[#ffd9a0]/70">
                   A card for <span className="font-semibold text-[#ffd97a]">{recipientName.trim() || "Sister"}</span>
                   {senderName.trim() && (
@@ -192,6 +257,9 @@ export default function CreateWizard({ initialTheme }: CreateWizardProps) {
                       {" "}from <span className="font-semibold text-[#ffd97a]">{senderName.trim()}</span>
                     </>
                   )}
+                </p>
+                <p className="max-w-[340px] text-center text-xs text-[#ffd9a0]/60">
+                  💡 Tap a photo on the card when it plays — it zooms in. Hover and it wiggles.
                 </p>
               </div>
             )}

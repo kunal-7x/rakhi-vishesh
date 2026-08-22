@@ -8,6 +8,8 @@ export type ThemeId =
   | "mehndi"
   | "confetti";
 
+export type AspectId = "9:16" | "1:1" | "16:9";
+
 export interface PhotoSpec {
   url: string;
   caption?: string;
@@ -20,6 +22,7 @@ export interface CardData {
   message: string;
   templateId: ThemeId;
   photos: PhotoSpec[];
+  aspect?: AspectId;
   accent?: "warm" | "cool" | "gold";
 }
 
@@ -29,6 +32,7 @@ export interface CardRecord {
   recipient_name: string;
   message: string;
   template_id: ThemeId;
+  aspect?: AspectId;
   audio_enabled: boolean;
   photos: PhotoSpec[];
   views: number;
@@ -41,5 +45,6 @@ export interface CreateCardInput {
   recipientName: string;
   message: string;
   templateId: ThemeId;
+  aspect: AspectId;
   photos: PhotoSpec[];
 }

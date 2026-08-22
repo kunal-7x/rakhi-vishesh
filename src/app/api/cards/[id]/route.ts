@@ -6,7 +6,7 @@ export const maxDuration = 30;
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  if (!id || !/^[a-z0-9]{8,32}$/.test(id)) {
+  if (!id || !/^[a-z0-9][a-z0-9-]{5,63}$/.test(id)) {
     return Response.json({ error: "Invalid id" }, { status: 400 });
   }
 
@@ -23,6 +23,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 
   const templateId = THEMES[data.template_id as keyof typeof THEMES] ? data.template_id : "marigold";
+  const aspect = ["9:16", "1:1", "16:9"].includes(data.aspect as string) ? data.aspect : "9:16";
 
   return Response.json({
     id: data.id,
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     recipient_name: data.recipient_name,
     message: data.message,
     template_id: templateId,
+    aspect,
     audio_enabled: data.audio_enabled,
     photos: Array.isArray(data.photos) ? data.photos : [],
     views: data.views ?? 0,

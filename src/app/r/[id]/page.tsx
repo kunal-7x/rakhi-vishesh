@@ -10,6 +10,7 @@ interface CardResponse {
   recipient_name: string;
   message: string;
   template_id: string;
+  aspect?: string;
   photos?: Array<{ url?: string; caption?: string }>;
 }
 
@@ -24,6 +25,7 @@ function mapCard(data: CardResponse): CardData {
     message: data.message,
     templateId: data.template_id as ThemeId,
     photos,
+    aspect: (["9:16", "1:1", "16:9"].includes(data.aspect as string) ? data.aspect : "9:16") as "9:16" | "1:1" | "16:9",
   };
 }
 

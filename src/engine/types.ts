@@ -1,5 +1,3 @@
-import type { PhotoSpec } from "@/lib/types";
-
 export type ThemeId =
   | "marigold"
   | "peacock"
@@ -10,15 +8,7 @@ export type ThemeId =
   | "mehndi"
   | "confetti";
 
-export interface CardData {
-  id: string;
-  senderName: string;
-  recipientName: string;
-  message: string;
-  templateId: ThemeId;
-  photos: PhotoSpec[];
-  accent?: "warm" | "cool" | "gold";
-}
+export type AspectId = "9:16" | "1:1" | "16:9";
 
 export interface ThemeConfig {
   id: ThemeId;
@@ -39,9 +29,27 @@ export interface ThemeConfig {
   };
 }
 
+export interface PhotoSpec {
+  url: string;
+  caption?: string;
+}
+
+export interface CardData {
+  id: string;
+  senderName: string;
+  recipientName: string;
+  message: string;
+  templateId: ThemeId;
+  photos: PhotoSpec[];
+  aspect?: AspectId;
+  accent?: "warm" | "cool" | "gold";
+}
+
 export interface RenderContext {
   phase?: "preview" | "export";
   t: number;
   images: Map<string, HTMLImageElement | null>;
   fontReady: boolean;
+  pointer?: { x: number; y: number } | null;
+  focus?: number | null;
 }

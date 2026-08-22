@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server";
+﻿import { type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 
 export const maxDuration = 30;
@@ -51,7 +51,7 @@ export async function DELETE(req: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   const id = req.nextUrl.searchParams.get("id") ?? "";
-  if (!/^[a-z0-9]{8,32}$/.test(id)) {
+  if (!/^[a-z0-9][a-z0-9-]{5,63}$/.test(id)) {
     return Response.json({ error: "Invalid id" }, { status: 400 });
   }
   const supabase = supabaseServer();
@@ -61,3 +61,4 @@ export async function DELETE(req: NextRequest) {
   }
   return Response.json({ ok: true });
 }
+

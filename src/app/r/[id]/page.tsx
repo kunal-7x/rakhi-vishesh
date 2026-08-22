@@ -57,7 +57,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   let res: Response;
   try {
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const base =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
     const url = base ? `${base}/api/cards/${id}` : `/api/cards/${id}`;
     res = await fetch(url, { cache: "no-store" });
   } catch (err) {

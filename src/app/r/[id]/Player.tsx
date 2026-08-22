@@ -49,6 +49,9 @@ export default function PlayerClient({
   const hasPhotos = (card.photos?.length ?? 0) > 0;
   const [photoIdx, setPhotoIdx] = useState(0);
   const [musicFile, setMusicFile] = useState<File | null | undefined>(undefined); // undefined=default, File=custom, null=no music
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
 
   const showToast = useCallback((text: string, tone: "success" | "error" = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -147,12 +150,54 @@ export default function PlayerClient({
   };
   const handleMusicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) setMusicFile(f);
+    if (f) {
+      setMusicFile(f);
+      const url = URL.createObjectURL(f);
+      setCustomAudioUrl(url);
+      setIsMusicPlaying(false);
+      setTimeout(() => {
+        const a = audioRef.current;
+        if (a) { a.src = url; a.play().then(()=> setIsMusicPlaying(true)).catch(()=>{}); }
+      }, 100);
+    }
   };
+
+  // background music for preview (default Phoolon Ka Taron Ka)
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (musicFile === null) { a.pause(); setIsMusicPlaying(false); return; }
+    if (musicFile instanceof File) {
+      // handled in handleMusicUpload
+      return;
+    }
+    // default music
+    a.src = "/default-music.mp3";
+    a.volume = 0.72;
+    a.loop = true;
+    const tryPlay = () => a.play().then(()=> setIsMusicPlaying(true)).catch(()=> setIsMusicPlaying(false));
+    const t = setTimeout(tryPlay, 900);
+    const onFirstInteract = () => { if (a.paused) tryPlay(); window.removeEventListener("click", onFirstInteract); window.removeEventListener("touchstart", onFirstInteract); };
+    window.addEventListener("click", onFirstInteract, {once:true});
+    window.addEventListener("touchstart", onFirstInteract, {once:true});
+    return () => { clearTimeout(t); window.removeEventListener("click", onFirstInteract); window.removeEventListener("touchstart", onFirstInteract); };
+  }, [musicFile]);
+
+  const toggleMusic = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) { a.play().then(()=> setIsMusicPlaying(true)).catch(()=>{}); }
+    else { a.pause(); setIsMusicPlaying(false); }
+  };
+
+  useEffect(() => {
+    return () => { if (customAudioUrl) URL.revokeObjectURL(customAudioUrl); };
+  }, [customAudioUrl]);
 
   if (cleanMode) {
     return (
       <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-black" style={bgStyle}>
+        <audio ref={audioRef} preload="auto" loop playsInline />
         <div className="relative h-full w-full" style={{ aspectRatio: "auto" }}>
           <CardPlayer ref={playerRef} card={card} aspect={aspect} autoplay loop replayKey={playerKey} interactive photoIndex={hasPhotos ? photoIdx : null} className="h-full w-full" />
         </div>
@@ -169,12 +214,17 @@ export default function PlayerClient({
             </div>
           </div>
         )}
+        {/* music toggle - subtle */}
+        <button onClick={toggleMusic} className="absolute right-4 top-4 z-20 rounded-full border border-white/15 bg-black/40 p-2.5 backdrop-blur-md transition hover:bg-black/60" aria-label="Toggle music">
+          <span className="text-sm">{isMusicPlaying ? "🔊" : "🔇"}</span>
+        </button>
       </div>
     );
   }
 
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-10" style={bgStyle}>
+      <audio ref={audioRef} preload="auto" loop playsInline className="hidden" />
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: `radial-gradient(circle at 50% 30%, ${theme.accent}22 0%, transparent 60%)` }}
@@ -273,6 +323,7 @@ export default function PlayerClient({
               </label>
               <button onClick={()=> setMusicFile(null)} className={`rounded-xl px-2.5 py-2 text-[11px] font-medium ${musicFile===null? "bg-white/20 text-white":"bg-white/10 text-white/60"}`}>Mute</button>
               <button onClick={()=> setMusicFile(undefined)} className={`rounded-xl px-2.5 py-2 text-[11px] font-medium ${musicFile===undefined? "bg-white/20 text-white":"bg-white/10 text-white/60"}`}>Default</button>
+              <button onClick={toggleMusic} className={`rounded-xl px-3 py-2 text-xs font-medium ${isMusicPlaying ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30" : "bg-white/10 text-white/60 border border-white/15"}`}>{isMusicPlaying ? "🔊" : "🔇"}</button>
 
               <button
                 onClick={handleDownload}

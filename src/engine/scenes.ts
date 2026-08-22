@@ -96,42 +96,49 @@ export class RakhiRenderer extends Renderer {
 
   private drawLuxuryDoors(ctx: CanvasRenderingContext2D, t: number, p: number, u: number): void {
     const theme=this.themeConfig;
-    const doorOpen = smoothstep(0.18,0.62, p);
-    const leftX = -this.W*0.52 * easeOutCubic(doorOpen);
-    const rightX = this.W*0.52 * easeOutCubic(doorOpen);
-    const glow = 1 - doorOpen;
-    // doors cover full canvas
+    const doorOpen = smoothstep(0.14,0.58, p);
+    const slide = easeOutCubic(doorOpen); // 0 closed, 1 fully open
+    // doors cover full canvas: left door centred at W/4, right at 3W/4, each W/2 wide
     for(let side=-1; side<=1; side+=2){
-      const off = side<0? leftX: rightX;
-      ctx.save(); ctx.translate(this.W/2 + off, this.H/2);
-      // door panel wood gradient
-      const dg = ctx.createLinearGradient(-this.W/2,0,this.W/2,0);
-      dg.addColorStop(0, side<0? "#2a0a05":"#4a1408"); dg.addColorStop(0.5, "#5c1a0a"); dg.addColorStop(1, side<0? "#4a1408":"#2a0a05");
-      ctx.fillStyle=dg; ctx.fillRect(-this.W/2-2, -this.H/2-2, this.W/2+4, this.H+4);
-      // gold ornate border
-      ctx.strokeStyle=theme.gold; ctx.lineWidth=10*u; ctx.strokeRect(-this.W/2+14*u, -this.H/2+18*u, this.W/2-28*u, this.H-36*u);
-      ctx.strokeStyle="#fff8d6"; ctx.lineWidth=2.2*u; ctx.strokeRect(-this.W/2+22*u, -this.H/2+26*u, this.W/2-44*u, this.H-52*u);
-      // carved mandala centre
-      ctx.save(); ctx.translate(side<0? this.W/4: -this.W/4, 0);
-      ctx.strokeStyle=theme.gold+"66"; ctx.lineWidth=1.6*u;
-      for(let r=1;r<=3;r++){ ctx.beginPath(); ctx.arc(0,0, (48+r*38)*u,0,Math.PI*2); ctx.stroke(); }
-      for(let a=0;a<8;a++){ const ang=a/8*Math.PI*2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*86*u, Math.sin(ang)*86*u); ctx.stroke(); }
-      // handle
-      const hx = side<0? 86*u: -86*u; ctx.fillStyle=theme.gold; ctx.shadowColor="#0008"; ctx.shadowBlur=14*u;
-      ctx.beginPath(); ctx.arc(hx,0,16*u,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
-      ctx.fillStyle="#fff6d6"; ctx.beginPath(); ctx.arc(hx-4*u,-3*u,4*u,0,Math.PI*2); ctx.fill();
+      const baseX = this.W * (side<0?0.25:0.75);
+      const off = side<0? -this.W*0.58*slide : this.W*0.58*slide;
+      ctx.save(); ctx.translate(baseX + off, this.H/2);
+      // wood panel
+      const dg = ctx.createLinearGradient(-this.W/4,0,this.W/4,0);
+      dg.addColorStop(0, "#1e0804"); dg.addColorStop(0.5, "#5e1a0e"); dg.addColorStop(1, "#2a0a05");
+      ctx.fillStyle=dg; ctx.fillRect(-this.W/4-2, -this.H/2-2, this.W/2+4, this.H+4);
+      // double gold border for luxury
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=9*u; ctx.strokeRect(-this.W/4+10*u, -this.H/2+14*u, this.W/2-20*u, this.H-28*u);
+      ctx.strokeStyle="#fff6d6"; ctx.lineWidth=1.8*u; ctx.strokeRect(-this.W/4+16*u, -this.H/2+20*u, this.W/2-32*u, this.H-40*u);
+      // subtle wood grain lines
+      ctx.strokeStyle="rgba(255,255,255,0.06)"; ctx.lineWidth=1*u;
+      for(let y=-this.H/2+40*u; y<this.H/2; y+= 42*u){ ctx.beginPath(); ctx.moveTo(-this.W/4+18*u, y); ctx.lineTo(this.W/4-18*u, y+ 6*u); ctx.stroke(); }
+      // carved centre medallion
+      ctx.save(); ctx.translate(0, -this.H*0.02);
+      ctx.strokeStyle=theme.gold+"70"; ctx.lineWidth=1.4*u;
+      for(let r=1;r<=3;r++){ ctx.beginPath(); ctx.arc(0,0, (42+r*34)*u,0,Math.PI*2); ctx.stroke(); }
+      for(let a=0;a<8;a++){ const ang=a/8*Math.PI*2 + t*0.08; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*78*u, Math.sin(ang)*78*u); ctx.globalAlpha=0.45; ctx.stroke(); }
+      ctx.fillStyle=theme.gold; ctx.globalAlpha=1; ctx.beginPath(); ctx.arc(0,0,10*u,0,Math.PI*2); ctx.fill();
       ctx.restore();
-      // inner bevel highlight
-      ctx.fillStyle="rgba(255,255,255,0.07)"; ctx.fillRect(-this.W/2+14*u, -this.H/2+18*u, this.W/2-28*u, 22*u);
+      // handle - brass knob with highlight
+      const hx = side<0? this.W*0.09 : -this.W*0.09;
+      ctx.save(); ctx.translate(hx, 0);
+      ctx.shadowColor="rgba(0,0,0,0.55)"; ctx.shadowBlur=16*u; ctx.shadowOffsetY=4*u;
+      ctx.fillStyle=theme.gold; ctx.beginPath(); ctx.arc(0,0,14*u,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+      ctx.fillStyle="#fff8d0"; ctx.beginPath(); ctx.arc(-3*u,-3*u,4*u,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle="#7a4a08"; ctx.lineWidth=1.2*u; ctx.stroke();
+      ctx.restore();
       ctx.restore();
     }
-    // centre light burst as doors part
-    if(doorOpen>0.12){
-      const a = smoothstep(0.12,0.55,doorOpen)*(1-doorOpen*0.3);
-      ctx.save(); ctx.globalAlpha=a*0.9; const g=ctx.createRadialGradient(this.cx,this.H*0.46,0,this.cx,this.H*0.46, this.W*0.5);
-      g.addColorStop(0,"rgba(255,248,214,0.95)"); g.addColorStop(0.35, theme.gold+"88"); g.addColorStop(1,"rgba(0,0,0,0)");
+    // soft glow as doors part - premium light
+    if(doorOpen>0.08){
+      const a = smoothstep(0.08,0.48,doorOpen)*(1-doorOpen*0.35);
+      ctx.save(); ctx.globalAlpha=a*0.85; const g=ctx.createRadialGradient(this.cx,this.H*0.46,0,this.cx,this.H*0.46, this.W*0.55);
+      g.addColorStop(0,"rgba(255,250,220,0.96)"); g.addColorStop(0.32, theme.gold+"66"); g.addColorStop(1,"rgba(0,0,0,0)");
       ctx.fillStyle=g; ctx.fillRect(0,0,this.W,this.H); ctx.restore();
     }
+    // top vignette for depth
+    if(doorOpen<0.92){ ctx.save(); ctx.globalAlpha=(1-doorOpen)*0.18; ctx.fillStyle="#000"; ctx.fillRect(0,0,this.W,this.H); ctx.restore(); }
   }
 
   protected drawIntro(ctx: CanvasRenderingContext2D, t: number): void {
@@ -155,58 +162,50 @@ export class RakhiRenderer extends Renderer {
       ctx.restore();
     }
 
-    // title: premium luxury gold-foil Anton staggered bloom, much bigger
+    // title: typewriter after doors open — premium gold foil Anton, much bigger as requested
     const title = "HAPPY RAKSHA BANDHAN";
-    const ts = 118 * u;
-    ctx.save();
-    ctx.translate(cx, cy + 56*u);
-    ctx.font = `400 ${ts}px 'Anton', 'Arial Black', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    // gold foil gradient for luxury
-    const tg = ctx.createLinearGradient(-this.W*0.45,0,this.W*0.45,0);
+    const ts = 132 * u;
+    const titleProg = clamp01((p - 0.62) / 0.32);
+    const typedLen = Math.floor(titleProg * title.length);
+    const tg = ctx.createLinearGradient(cx- this.W*0.42, cy, cx+ this.W*0.42, cy);
     tg.addColorStop(0,"#7a4a08"); tg.addColorStop(0.22, theme.gold); tg.addColorStop(0.5,"#fff8d6"); tg.addColorStop(0.78, theme.gold); tg.addColorStop(1,"#7a4a08");
-    const words = title.split(" ");
-    const spaceW = ctx.measureText(" ").width;
-    const allW = words.map((w) => ctx.measureText(w).width).reduce((a, b, i) => a + b + (i === 0 ? 0 : spaceW), 0);
-    let wx = -allW / 2;
-    const totalLetters = title.replace(/ /g,"").length;
-    let li=0;
-    for (const word of words) {
-      const letters = [...word];
-      const lw = ctx.measureText(word).width;
-      let lx = wx;
-      for (const ch of letters) {
-        const stagger = (li / totalLetters) * 0.42;
-        const a = smoothstep(0.48 + stagger, 0.78 + stagger, p);
-        const dy = (1 - easeOutBack(a)) * 74 * u;
-        const sc = a <= 0 ? 0.001 : easeOutBack(a);
-        ctx.save();
-        ctx.translate(lx, dy);
-        ctx.scale(sc, sc);
-        ctx.globalAlpha = a;
-        ctx.shadowColor = "#000"; ctx.shadowBlur = 22 * u; ctx.shadowOffsetY=6*u;
-        // stroke for luxury depth
-        ctx.strokeStyle="#3a1f06"; ctx.lineWidth=8*u; ctx.strokeText(ch, 0, 0);
-        ctx.fillStyle = tg; ctx.fillText(ch, 0, 0);
-        // inner highlight
-        ctx.shadowBlur=0; ctx.globalAlpha=a*0.55; ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.font=`400 ${ts*0.42}px 'Anton', sans-serif`;
-        // tiny top highlight not needed
-        ctx.restore();
-        lx += ctx.measureText(ch).width; li++;
-      }
-      wx += lw + spaceW;
+    ctx.save();
+    ctx.translate(cx, cy + 68*u);
+    ctx.font = `400 ${ts}px 'Anton','Arial Black',sans-serif`;
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    // measure full for centering
+    const visible = title.slice(0, typedLen);
+    const fullW = ctx.measureText(title).width;
+    const visW = ctx.measureText(visible).width;
+    // draw typed part with gold foil + depth
+    ctx.shadowColor="#000"; ctx.shadowBlur=18*u; ctx.shadowOffsetY=6*u;
+    ctx.strokeStyle="#3a1f06"; ctx.lineWidth=9*u; ctx.strokeText(visible, 0, 0);
+    ctx.fillStyle=tg; ctx.fillText(visible, 0,0);
+    // cursor blink
+    if(titleProg>0.04 && titleProg<0.99){
+      const blink = Math.sin(t*7)>0 ? 1 : 0.18;
+      const cursorX = -fullW/2 + visW + 6*u;
+      ctx.save(); ctx.globalAlpha=blink; ctx.fillStyle=theme.gold; ctx.fillRect(cursorX, -ts*0.44, 4.5*u, ts*0.88); ctx.restore();
     }
     ctx.restore();
+    // faint remaining ghost
+    if(typedLen < title.length){
+      const remaining = title.slice(typedLen);
+      ctx.save(); ctx.translate(cx, cy+68*u); ctx.font=`400 ${ts}px 'Anton','Arial Black',sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.globalAlpha=0.13; ctx.fillStyle=theme.text; const ghostW = ctx.measureText(visible).width; ctx.fillText(remaining, ghostW/2 + (ctx.measureText(remaining).width/2 - visW/2 + (visW? 4*u:0)),0); ctx.restore();
+    }
 
-    // script tagline - Billion Dreams much bigger now
-    const phase2 = smoothstep(0.58, 0.92, p);
+    // script tagline - typewriter as well, Billion Dreams bigger
+    const tag = "· the thread that binds us ·";
+    const tagProg = clamp01((p - 0.78)/0.20);
+    const tagLen = Math.floor(tagProg * tag.length);
     ctx.save();
-    ctx.globalAlpha = phase2 * 0.98;
-    this.glowText(ctx, "· the thread that binds us ·", cx, cy + 172 * u, 46 * u, "'Billion Dreams', 'Dancing Script', cursive", theme.text, {
-      blur: 26 * u,
+    ctx.globalAlpha = tagProg>0? 0.96:0;
+    this.glowText(ctx, tag.slice(0, tagLen), cx, cy + 168 * u, 52 * u, "'Billion Dreams', 'Dancing Script', cursive", theme.text, {
+      blur: 22 * u,
       weight: "400",
     });
+    if(tagProg>0.05 && tagProg<0.99){ const b=Math.sin(t*6)>0?1:0.2; ctx.save(); ctx.globalAlpha=b*0.9; ctx.fillStyle=theme.gold; ctx.fillRect(cx + ctx.measureText(tag.slice(0,tagLen)).width/2 - ctx.measureText(tag).width/2 + 8*u, cy+168*u -18*u, 3*u, 36*u); ctx.restore(); }
     ctx.restore();
 
     // palace doors sliding open on top (premium entrance)

@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { RakhiRenderer, imageCache } from "@/engine/scenes";
+import { RakhiRenderer, imageCache, preloadImage } from "@/engine/scenes";
 import { ensureFonts } from "@/engine/fonts";
 import type { CardData, AspectId } from "@/lib/types";
 
@@ -48,6 +48,12 @@ const CardPlayer = forwardRef<CardPlayerHandle, Props>(function CardPlayer(
     },
     getTimeline: () => rendererRef.current?.timelineInfo as never,
   }));
+
+  // preload photos so they actually show (was missing → invisible)
+  useEffect(() => {
+    const urls = card.photos ?? [];
+    for (const p of urls) preloadImage(p.url);
+  }, [card.photos]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

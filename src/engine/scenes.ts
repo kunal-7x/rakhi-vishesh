@@ -56,6 +56,84 @@ export class RakhiRenderer extends Renderer {
   // ============================================================
   // SCENE 0 — INTRO (thread lands, title blooms)
   // ============================================================
+  // ---- realistic rakhi helper ----
+  private drawRealisticRakhi(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, t: number): void {
+    const u = this.base / 1080;
+    const theme = this.themeConfig;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    // shadow under rakhi
+    ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = "#000"; ctx.beginPath(); ctx.ellipse(0, 18*u, 140*u, 28*u, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    // silk threads draping down
+    ctx.strokeStyle = theme.accent; ctx.lineWidth = 3.2*u; ctx.lineCap = "round";
+    for (let i=-1;i<=1;i+=2){
+      ctx.beginPath(); ctx.moveTo(i*10*u, 14*u);
+      ctx.bezierCurveTo(i*22*u, 62*u, i*16*u, 118*u, i*8*u, 170*u); ctx.stroke();
+      // tassel pompom
+      ctx.fillStyle = i<0 ? theme.gold : theme.accentSoft; ctx.beginPath(); ctx.arc(i*8*u, 182*u, 10*u,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = theme.text; ctx.globalAlpha=0.9; ctx.beginPath(); ctx.arc(i*8*u, 182*u, 3.2*u,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+      // beads along thread
+      for(let b=0;b<3;b++){ const by=38*u + b*36*u; ctx.fillStyle= theme.gold; ctx.beginPath(); ctx.arc(i*(10+ b*1.2)*u, by, 4.2*u,0,Math.PI*2); ctx.fill(); ctx.strokeStyle="#fff6"; ctx.lineWidth=1.2*u; ctx.stroke(); }
+    }
+    // outer gold ring with foil highlight
+    const grad = ctx.createRadialGradient(-18*u, -18*u, 10*u, 0,0, 56*u);
+    grad.addColorStop(0, "#fff8d6"); grad.addColorStop(0.3, theme.gold); grad.addColorStop(0.7, "#b45309"); grad.addColorStop(1, theme.gold);
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0,0,56*u,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#7a4a08"; ctx.lineWidth=2*u; ctx.stroke();
+    // inner kundan jewel - faceted red
+    const jg = ctx.createRadialGradient(-12*u,-14*u,4*u,0,0,38*u);
+    jg.addColorStop(0, "#ff9aa2"); jg.addColorStop(0.4, "#dc2626"); jg.addColorStop(1, "#7f1d1d");
+    ctx.fillStyle=jg; ctx.beginPath(); ctx.arc(0,0,36*u,0,Math.PI*2); ctx.fill();
+    // highlight sparkle on jewel
+    ctx.fillStyle="rgba(255,255,255,0.9)"; ctx.beginPath(); ctx.ellipse(-12*u,-12*u,9*u,5*u, -0.6,0,Math.PI*2); ctx.fill();
+    // pearl ring around jewel
+    for(let i=0;i<12;i++){ const a=i/12*Math.PI*2; const px=Math.cos(a)*46*u, py=Math.sin(a)*46*u; ctx.fillStyle="#fffef8"; ctx.shadowColor="#ffd97a"; ctx.shadowBlur=8*u; ctx.beginPath(); ctx.arc(px,py,5.2*u,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0; ctx.strokeStyle="#e8cfa0"; ctx.lineWidth=1*u; ctx.stroke(); }
+    // small sparkle
+    const tw=0.5+0.5*Math.sin(t*3.2); ctx.globalAlpha=0.7+tw*0.3; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(18*u,-22*u,1.8*u,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  private drawLuxuryDoors(ctx: CanvasRenderingContext2D, t: number, p: number, u: number): void {
+    const theme=this.themeConfig;
+    const doorOpen = smoothstep(0.18,0.62, p);
+    const leftX = -this.W*0.52 * easeOutCubic(doorOpen);
+    const rightX = this.W*0.52 * easeOutCubic(doorOpen);
+    const glow = 1 - doorOpen;
+    // doors cover full canvas
+    for(let side=-1; side<=1; side+=2){
+      const off = side<0? leftX: rightX;
+      ctx.save(); ctx.translate(this.W/2 + off, this.H/2);
+      // door panel wood gradient
+      const dg = ctx.createLinearGradient(-this.W/2,0,this.W/2,0);
+      dg.addColorStop(0, side<0? "#2a0a05":"#4a1408"); dg.addColorStop(0.5, "#5c1a0a"); dg.addColorStop(1, side<0? "#4a1408":"#2a0a05");
+      ctx.fillStyle=dg; ctx.fillRect(-this.W/2-2, -this.H/2-2, this.W/2+4, this.H+4);
+      // gold ornate border
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=10*u; ctx.strokeRect(-this.W/2+14*u, -this.H/2+18*u, this.W/2-28*u, this.H-36*u);
+      ctx.strokeStyle="#fff8d6"; ctx.lineWidth=2.2*u; ctx.strokeRect(-this.W/2+22*u, -this.H/2+26*u, this.W/2-44*u, this.H-52*u);
+      // carved mandala centre
+      ctx.save(); ctx.translate(side<0? this.W/4: -this.W/4, 0);
+      ctx.strokeStyle=theme.gold+"66"; ctx.lineWidth=1.6*u;
+      for(let r=1;r<=3;r++){ ctx.beginPath(); ctx.arc(0,0, (48+r*38)*u,0,Math.PI*2); ctx.stroke(); }
+      for(let a=0;a<8;a++){ const ang=a/8*Math.PI*2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*86*u, Math.sin(ang)*86*u); ctx.stroke(); }
+      // handle
+      const hx = side<0? 86*u: -86*u; ctx.fillStyle=theme.gold; ctx.shadowColor="#0008"; ctx.shadowBlur=14*u;
+      ctx.beginPath(); ctx.arc(hx,0,16*u,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle="#fff6d6"; ctx.beginPath(); ctx.arc(hx-4*u,-3*u,4*u,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      // inner bevel highlight
+      ctx.fillStyle="rgba(255,255,255,0.07)"; ctx.fillRect(-this.W/2+14*u, -this.H/2+18*u, this.W/2-28*u, 22*u);
+      ctx.restore();
+    }
+    // centre light burst as doors part
+    if(doorOpen>0.12){
+      const a = smoothstep(0.12,0.55,doorOpen)*(1-doorOpen*0.3);
+      ctx.save(); ctx.globalAlpha=a*0.9; const g=ctx.createRadialGradient(this.cx,this.H*0.46,0,this.cx,this.H*0.46, this.W*0.5);
+      g.addColorStop(0,"rgba(255,248,214,0.95)"); g.addColorStop(0.35, theme.gold+"88"); g.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=g; ctx.fillRect(0,0,this.W,this.H); ctx.restore();
+    }
+  }
+
   protected drawIntro(ctx: CanvasRenderingContext2D, t: number): void {
     const theme = this.themeConfig;
     const p = clamp01(t / this.timelineInfo.scenes[0].duration);
@@ -64,106 +142,81 @@ export class RakhiRenderer extends Renderer {
     const u = this.base / 1080;
     const cx = this.cx;
     const cy = this.H * 0.42;
-    const phase1 = smoothstep(0.06, 0.5, p);
-    const phase2 = smoothstep(0.45, 0.92, p);
 
-    // thread ring sweeping in
-    ctx.save();
-    ctx.translate(cx, cy);
-    const ringR = 340 * u - phase1 * 10 * u + Math.sin(t * 0.8) * 4 * u;
-    ctx.rotate(-Math.PI / 4);
-    ctx.lineWidth = 2.5 * u;
-    for (let i = 0; i < 3; i++) {
-      ctx.globalAlpha = 0.14 + phase1 * 0.3 - i * 0.05;
-      ctx.strokeStyle = theme.accent;
-      ctx.beginPath();
-      ctx.arc(0, 0, ringR - i * 42 * u + Math.sin(t * 0.9 + i) * 6 * u, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.rotate((Math.PI / 4) * 2);
-    for (let i = 0; i < 12; i++) {
-      const ang = (i / 12) * Math.PI * 2;
-      const wob = Math.sin(t * 1.6 + i * 1.3) * 6 * u;
-      const r = ringR - 84 * u + wob;
-      const dir = i % 2 === 0 ? 1 : -1;
-      ctx.beginPath();
-      ctx.arc(Math.cos(ang) * r, Math.sin(ang) * r, (6 + dir * 2) * u, 0, Math.PI * 2);
-      ctx.fillStyle = i % 3 === 0 ? theme.gold : theme.accent;
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
-    }
-    ctx.restore();
+    // subtle gold dust behind
+    this.drawSparkles(ctx, t, 14, seededRng(this.cardData.id + "|intro-dust"), { yy0: this.base * 0.12, yy1: this.H - this.base * 0.18, size: 6 * u });
 
-    // title: staggered letter bloom
+    // realistic rakhi behind title, grows as doors open
+    const rakhiReveal = smoothstep(0.42,0.78,p);
+    if(rakhiReveal>0.01){
+      ctx.save(); ctx.globalAlpha=rakhiReveal;
+      const s = (0.9 + rakhiReveal*0.22 + Math.sin(t*0.7)*0.02)* (this.base/1080*1.08);
+      this.drawRealisticRakhi(ctx, cx, cy - 74*u, s, t);
+      ctx.restore();
+    }
+
+    // title: premium luxury gold-foil Anton staggered bloom, much bigger
     const title = "HAPPY RAKSHA BANDHAN";
-    const ts = 84 * u;
+    const ts = 118 * u;
     ctx.save();
-    ctx.translate(cx, cy - 40 * u);
-    ctx.font = `900 ${ts}px 'Rajdhani', 'Arial Black', sans-serif`;
+    ctx.translate(cx, cy + 56*u);
+    ctx.font = `400 ${ts}px 'Anton', 'Arial Black', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    // gold foil gradient for luxury
+    const tg = ctx.createLinearGradient(-this.W*0.45,0,this.W*0.45,0);
+    tg.addColorStop(0,"#7a4a08"); tg.addColorStop(0.22, theme.gold); tg.addColorStop(0.5,"#fff8d6"); tg.addColorStop(0.78, theme.gold); tg.addColorStop(1,"#7a4a08");
     const words = title.split(" ");
     const spaceW = ctx.measureText(" ").width;
     const allW = words.map((w) => ctx.measureText(w).width).reduce((a, b, i) => a + b + (i === 0 ? 0 : spaceW), 0);
     let wx = -allW / 2;
-    const totalLetters = title.length;
+    const totalLetters = title.replace(/ /g,"").length;
+    let li=0;
     for (const word of words) {
       const letters = [...word];
       const lw = ctx.measureText(word).width;
       let lx = wx;
       for (const ch of letters) {
-        const ci = title.indexOf(ch);
-        const stagger = (ci / totalLetters) * 0.32;
-        const a = smoothstep(0.08 + stagger, 0.4 + stagger, p);
-        const dy = (1 - easeOutBack(a)) * 60 * u;
+        const stagger = (li / totalLetters) * 0.42;
+        const a = smoothstep(0.48 + stagger, 0.78 + stagger, p);
+        const dy = (1 - easeOutBack(a)) * 74 * u;
         const sc = a <= 0 ? 0.001 : easeOutBack(a);
         ctx.save();
         ctx.translate(lx, dy);
         ctx.scale(sc, sc);
         ctx.globalAlpha = a;
-        ctx.shadowColor = theme.accent;
-        ctx.shadowBlur = 34 * u;
-        ctx.fillStyle = theme.text;
-        ctx.fillText(ch, 0, 0);
+        ctx.shadowColor = "#000"; ctx.shadowBlur = 22 * u; ctx.shadowOffsetY=6*u;
+        // stroke for luxury depth
+        ctx.strokeStyle="#3a1f06"; ctx.lineWidth=8*u; ctx.strokeText(ch, 0, 0);
+        ctx.fillStyle = tg; ctx.fillText(ch, 0, 0);
+        // inner highlight
+        ctx.shadowBlur=0; ctx.globalAlpha=a*0.55; ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.font=`400 ${ts*0.42}px 'Anton', sans-serif`;
+        // tiny top highlight not needed
         ctx.restore();
-        lx += ctx.measureText(ch).width;
+        lx += ctx.measureText(ch).width; li++;
       }
       wx += lw + spaceW;
     }
     ctx.restore();
 
-    // script tagline
+    // script tagline - Billion Dreams much bigger now
+    const phase2 = smoothstep(0.58, 0.92, p);
     ctx.save();
-    ctx.globalAlpha = phase2 * 0.95;
-    this.glowText(ctx, "· the thread that binds us ·", cx, cy + 96 * u, 36 * u, "'Dancing Script', cursive", theme.accentSoft, {
-      blur: 18 * u,
-      weight: "600",
+    ctx.globalAlpha = phase2 * 0.98;
+    this.glowText(ctx, "· the thread that binds us ·", cx, cy + 172 * u, 46 * u, "'Billion Dreams', 'Dancing Script', cursive", theme.text, {
+      blur: 26 * u,
+      weight: "400",
     });
     ctx.restore();
 
-    // small thread knot at bottom landing
-    const knotT = smoothstep(0.35, 0.75, p);
-    if (knotT > 0) {
-      ctx.save();
-      ctx.translate(cx, this.H * 0.8);
-      ctx.globalAlpha = knotT;
-      ctx.strokeStyle = theme.gold;
-      ctx.lineWidth = 5 * u;
-      const curve = (yOff: number) => {
-        ctx.beginPath();
-        for (let x = -160 * u; x <= 160 * u; x += 8) {
-          const k = x / (160 * u);
-          const y = yOff + Math.sin(k * Math.PI) * -40 * u;
-          if (x === -160 * u) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      };
-      curve(knotT * 90 * u);
-      ctx.restore();
-    }
+    // palace doors sliding open on top (premium entrance)
+    this.drawLuxuryDoors(ctx, t, p, u);
 
-    this.drawSparkles(ctx, t, 26, seededRng(this.cardData.id + "|intro"), { yy0: this.base * 0.18, yy1: this.H - this.base * 0.14, size: 10 * u });
+    // extra sparkle burst as doors open
+    if(p>0.45 && p<0.78){
+      const b = smoothstep(0.45,0.58,p)*(1-smoothstep(0.68,0.78,p));
+      ctx.save(); ctx.globalAlpha=b; this.drawSparkles(ctx, t, 18, seededRng(this.cardData.id + "|door-burst"), { yy0: this.H*0.32, yy1: this.H*0.58, size: 12 * u }); ctx.restore();
+    }
   }
 
   // ============================================================
@@ -176,70 +229,98 @@ export class RakhiRenderer extends Renderer {
     this.motifBg(ctx, t);
     const cx = this.cx;
     const u = this.base / 1080;
-    const to = smoothstep(0.06, 0.4, p);
-    const from = smoothstep(0.46, 0.86, p);
+    const baseT = t; void baseT;
 
-    const toSize = clampMinMax(140 * u - Math.min(90 * u, (card.recipientName.length ?? 0) * 4.4 * u), 60 * u, 140 * u);
-    const fromSize = clampMinMax(90 * u - Math.min(50 * u, (card.senderName.length ?? 0) * 3 * u), 44 * u, 90 * u);
-
-    // swirl arcs tracing around names
+    // luxurious swirl mandala behind
     ctx.save();
-    ctx.translate(cx, this.H * 0.42);
-    const rng = seededRng(card.id + "|names");
-    ctx.strokeStyle = theme.accent;
-    ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 1.3);
-    for (let i = 0; i < 3; i++) {
-      const r = (150 + i * 70) * u;
-      const a0 = t * 0.6 + i;
-      ctx.lineWidth = 2.4 * u;
-      ctx.beginPath();
-      ctx.arc(0, 0, r, a0, a0 + Math.PI * 1.2);
-      ctx.stroke();
+    ctx.translate(cx, this.H * 0.44);
+    ctx.globalAlpha = 0.22 + 0.12*Math.sin(t*1.1);
+    ctx.strokeStyle = theme.gold;
+    ctx.lineWidth = 1.8*u;
+    for(let i=0;i<2;i++){ const r=(220+i*96)*u; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke(); }
+    // rotating jewels
+    for(let i=0;i<10;i++){ const ang=i/10*Math.PI*2 + t*0.5; const r=220*u + (i%2?96*u:0); const x=Math.cos(ang)*r, y=Math.sin(ang)*r; ctx.fillStyle=i%3?theme.gold:theme.accent; ctx.shadowColor=theme.gold; ctx.shadowBlur=12*u; ctx.beginPath(); ctx.arc(x,y,5.5*u,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+
+    // --- FOR label + RECIPIENT typewriter (Billion Dreams script for label, Anton huge for name) ---
+    const labelToA = smoothstep(0.02,0.18,p);
+    if(labelToA>0){
+      ctx.save(); ctx.translate(cx, this.H*0.30); ctx.globalAlpha=labelToA;
+      this.glowText(ctx, "FOR MY BELOVED", 0, 0, 42*u, "'Billion Dreams','Dancing Script',cursive", theme.text, {blur:18*u, weight:"400"});
+      ctx.restore();
     }
-    ctx.restore();
-
-    ctx.save();
-    ctx.translate(cx, this.H * 0.42);
-    ctx.scale(easeOutBack(to), easeOutBack(to));
-    ctx.globalAlpha = to;
-    this.glowText(ctx, "FOR", 0, -150 * u, 40 * u, "'Dancing Script', cursive", theme.accentSoft, { blur: 12 * u });
-    ctx.restore();
-
-    const scale = easeOutBack(to);
-    ctx.save();
-    ctx.translate(cx, this.H * 0.42);
-    ctx.scale(scale, scale);
-    ctx.globalAlpha = clamp01(to * 1.25);
-    ctx.font = `700 ${toSize}px 'Rajdhani', 'Arial Black', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.shadowColor = theme.accent;
-    ctx.shadowBlur = 30 * u;
-    ctx.fillStyle = theme.text;
-    ctx.fillText(card.recipientName, 0, 10 * u);
-    ctx.restore();
-
-    this.drawSparkles(ctx, t, 20, seededRng(card.id + "|names"), { yy0: this.base * 0.24, yy1: this.H - this.base * 0.2, size: 9 * u });
-
-    if (from > 0.1) {
-      const fc = easeOutBack(from);
-      ctx.save();
-      ctx.translate(cx, this.H * 0.72);
-      ctx.scale(fc, fc);
-      ctx.globalAlpha = clamp01(from * 1.2);
-      this.glowText(ctx, "FROM", 0, -88 * u, 32 * u, "'Dancing Script', cursive", theme.accentSoft, { blur: 10 * u });
-      ctx.font = `700 ${fromSize}px 'Rajdhani', 'Arial Black', sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowColor = theme.accent;
-      ctx.shadowBlur = 24 * u;
-      ctx.fillStyle = theme.text;
-      ctx.fillText(card.senderName || "Your Brother", 0, 0);
+    // recipient typewriter - premium luxury Anton gold foil, much bigger
+    {
+      const name = card.recipientName || "Sister";
+      const start=0.12, dur=0.28;
+      const prog = clamp01((p - start)/dur);
+      const chars = [...name];
+      const typed = Math.floor(prog * chars.length);
+      const ts = clampMinMax(168*u - Math.min(64*u, name.length*3.2*u), 88*u, 168*u);
+      // gold foil gradient
+      const grad = ctx.createLinearGradient(cx-320*u,0,cx+320*u,0);
+      grad.addColorStop(0, theme.gold); grad.addColorStop(0.5, "#fff7cc"); grad.addColorStop(1, theme.gold);
+      ctx.save(); ctx.translate(cx, this.H*0.42);
+      // underline luxury rule appears with name
+      const ruleA = smoothstep(0.42,0.62,p);
+      if(ruleA>0){ ctx.save(); ctx.globalAlpha=ruleA*0.9; ctx.strokeStyle=theme.gold; ctx.lineWidth=2.2*u; ctx.beginPath(); ctx.moveTo(-260*u, 62*u); ctx.lineTo(260*u,62*u); ctx.stroke(); ctx.restore(); }
+      ctx.font = `400 ${ts}px 'Anton','Arial Black',sans-serif`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      let accW=0; const widths=chars.map(c=>ctx.measureText(c).width);
+      const totalW=widths.reduce((a,b)=>a+b,0)+(chars.length-1)*4*u;
+      let curX = -totalW/2;
+      for(let i=0;i<chars.length;i++){
+        const a = i < typed ? 1 : (i===typed ? (Math.sin(t*8)>0?1:0.25) : 0);
+        if(a<=0){ curX+=widths[i]+4*u; continue; }
+        ctx.save(); ctx.translate(curX+widths[i]/2, 0);
+        ctx.globalAlpha=a;
+        ctx.shadowColor="#000"; ctx.shadowBlur=18*u; ctx.shadowOffsetY=5*u;
+        ctx.strokeStyle="#3a1f06"; ctx.lineWidth=7*u; ctx.strokeText(chars[i],0,0);
+        ctx.fillStyle=grad; ctx.fillText(chars[i],0,0);
+        ctx.restore();
+        curX+=widths[i]+4*u;
+      }
+      // cursor
+      if(prog<1 && prog>0.06){
+        const cx2 = (()=>{ let x=-totalW/2; for(let k=0;k<typed;k++) x+=widths[k]+4*u; return x; })();
+        const blink = Math.sin(t*6)>0?1:0.12; ctx.save(); ctx.translate(curX - (typed<chars.length? widths[typed]||0:0)/2 - 2*u, 0); ctx.globalAlpha=blink; ctx.fillStyle=theme.accent; ctx.fillRect(cx2, -ts*0.42, 3.5*u, ts*0.84); ctx.restore();
+        void cx2;
+      }
       ctx.restore();
     }
 
-    // tiny dots starfield
-    this.drawSparkles(ctx, t, 8, seededRng(card.id + "|ns2"), { yy0: this.base * 0.1, yy1: this.H - this.base * 0.1, size: 6 * u });
+    this.drawSparkles(ctx, t, 22, seededRng(card.id + "|names"), { yy0: this.base * 0.24, yy1: this.H - this.base * 0.2, size: 9 * u });
+
+    // --- FROM + SENDER typewriter second half ---
+    const fromProg = clamp01((p - 0.56)/0.30);
+    if(fromProg>0.01){
+      const fcA = smoothstep(0.54,0.66,p);
+      ctx.save(); ctx.translate(cx, this.H*0.62); ctx.globalAlpha=fcA;
+      this.glowText(ctx, "from", 0, -62*u, 44*u, "'Billion Dreams','Dancing Script',cursive", theme.accentSoft, { blur: 16*u, weight:"400" });
+      ctx.restore();
+      const sName = card.senderName || "Your Brother";
+      const sChars=[...sName]; const sTyped=Math.floor(fromProg * sChars.length);
+      const sTs = clampMinMax(92*u - Math.min(28*u, sName.length*1.8*u), 62*u, 92*u);
+      const sGrad = ctx.createLinearGradient(cx-220*u,0,cx+220*u,0);
+      sGrad.addColorStop(0,"#ffedd5"); sGrad.addColorStop(0.5, theme.text); sGrad.addColorStop(1,"#ffedd5");
+      ctx.save(); ctx.translate(cx, this.H*0.70);
+      ctx.font=`400 ${sTs}px 'Billion Dreams','Dancing Script',cursive`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      let acc=0; const sw = sChars.map(c=>ctx.measureText(c).width); const sTotal=sw.reduce((a,b)=>a+b,0)+(sChars.length-1)*2*u;
+      let sx=-sTotal/2;
+      for(let i=0;i<sChars.length;i++){
+        const a=i < sTyped ? 1 : (i===sTyped? (Math.sin(t*7)>0?1:0.3):0);
+        if(a<=0){ sx+=sw[i]+2*u; continue; }
+        ctx.save(); ctx.translate(sx+sw[i]/2, (1-easeOutBack(a))*18*u);
+        ctx.globalAlpha=a; ctx.shadowColor=theme.accent; ctx.shadowBlur=14*u;
+        ctx.fillStyle=sGrad; ctx.fillText(sChars[i],0,0);
+        ctx.restore(); sx+=sw[i]+2*u;
+      }
+      ctx.restore();
+      // tiny sparkle under sender
+      if(fromProg>0.72){ ctx.save(); ctx.globalAlpha=smoothstep(0.72,0.92,fromProg); this.glowText(ctx,"❦", cx, this.H*0.80, 36*u, "sans-serif", theme.gold,{blur:16*u}); ctx.restore(); }
+    }
+    this.drawSparkles(ctx, t, 10, seededRng(card.id + "|ns2"), { yy0: this.base * 0.1, yy1: this.H - this.base * 0.1, size: 6 * u });
   }
 
   // ============================================================
@@ -258,62 +339,103 @@ export class RakhiRenderer extends Renderer {
       this.drawPhotoFallback(ctx, t, p, u);
       return;
     }
-
     const n = photos.length;
-    const wall = this.computeWall(n, u);
-    this.drawRopes(ctx, t, wall, u, p);
+    // decide which photo to show: manual index wins (preview Next), else time-based for export/auto preview
+    let idx: number;
+    if (typeof info.photoIndex === "number" && info.photoIndex !== null) {
+      idx = Math.max(0, Math.min(n - 1, info.photoIndex));
+    } else if (info.phase === "export") {
+      // export: slide one by one, 1.5s each
+      const per = Math.max(1.2, scene.duration / Math.max(1, n));
+      idx = Math.min(n - 1, Math.floor(((t - scene.start) / per)));
+    } else {
+      // auto preview: cycle slowly for wizard small preview (still single centred, no wall)
+      const per = scene.duration / Math.max(1, n);
+      idx = Math.min(n - 1, Math.floor(((t - scene.start) / per)));
+    }
+    const photo = photos[idx];
 
-    // clip-in stagger
-    const dropped = smoothstep(0.02, 0.38, p);
-    const ropeSway = Math.sin(t * 0.55) * (wall.swayAmp * u);
+    // perfectly centred big polaroid
+    const isExport = info.phase === "export";
+    const cx = this.cx;
+    const cy = this.cy; // true centre both axes
+    const w = Math.min(this.W*0.74, this.base*0.62);
+    const h = w * 1.28;
+    const ropeY = cy - h/2 - 22*u;
 
-    for (let i = 0; i < n; i++) {
-      const item = wall.items[i];
-      const cl = item.cl;
-      const appear = easeOutCubic(clamp01(dropped * 1.5 + i * 0.02 - i * 0.003));
-      const isHover = this.hoverIdx === i && info.phase !== "export";
-      const isFocus = this.focusIdx === i;
-      const wob = Math.sin(t * (1.7 + (i % 3) * 0.3) + i * 1.31);
-      const wiggle = isHover ? wob * 0.07 : wob * item.swing;
-      const rot = item.rot * 0.9 + wiggle;
-      const drop = (1 - appear) * (this.H * 0.16) + easeOutCubic(appear) * 0;
-      const lift = isHover ? -this.base * 0.02 : 0;
-      const yOff = Math.sin(t * 0.9 + i * 0.7 + item.cl.y * 0.002) * 5 * u + ropeSway * (0.4 + (i % 2) * 0.1) + drop;
-      const xOff = ropeSway * (0.5 + ((i + n) % 3) * 0.22) + Math.cos(t * 0.8 + i) * 3 * u;
+    // rope sagging across - centred, with subtle sway
+    const sway = Math.sin(t*0.55)* this.base*0.018;
+    ctx.save();
+    ctx.strokeStyle = theme.textSoft+"AA";
+    ctx.lineWidth = 3.2*u;
+    ctx.lineCap="round";
+    ctx.beginPath();
+    ctx.moveTo(this.W*0.09, ropeY + sway*0.4);
+    ctx.quadraticCurveTo(cx, ropeY + this.base*0.055 + sway, this.W*0.91, ropeY + sway*0.4);
+    ctx.stroke();
+    // knot highlights
+    ctx.fillStyle=theme.gold; ctx.beginPath(); ctx.arc(this.W*0.09, ropeY, 4.2*u,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(this.W*0.91, ropeY, 4.2*u,0,Math.PI*2); ctx.fill();
+    ctx.restore();
 
-      const cx = item.cl.x;
-      const cy = item.cl.y + yOff + lift;
-      const w = item.w;
-      const h = item.h;
-
-      const focusScale = isFocus ? this.focusDepth() : 1;
-
-      ctx.save();
-      ctx.translate(cx + xOff, cy);
-      ctx.rotate(rot);
-      ctx.scale(focusScale * appear, focusScale * appear);
-      ctx.globalAlpha = clamp01(appear * 0.98);
-      this.drawPolaroid(ctx, photos[i], 0, 0, w, h, u, i, theme, info);
-      ctx.restore();
+    // slide animation for export: photo slides from right to centre (0.35), stays, then next will slide
+    let slideX = 0;
+    let alpha = 1;
+    if (isExport && n>1) {
+      const per = Math.max(1.2, scene.duration / Math.max(1, n));
+      const local = ((t - scene.start) % per) / per; // 0..1 within current photo slot
+      const enter = smoothstep(0,0.32, local);
+      const exit = smoothstep(0.72,1, local);
+      const inX = (1 - easeOutCubic(enter)) * (this.W*0.85);
+      const outX = easeOutCubic(exit) * (-this.W*0.90);
+      slideX = inX + outX;
+      alpha = clamp01(enter*1.2) * clamp01(1 - exit*1.1);
+    } else {
+      // preview manual: subtle appear scale
+      const appear = easeOutBack(smoothstep(0.04,0.42, p));
+      // handled via scale below; keep alpha 1
+      alpha = 0.98;
+      void appear;
     }
 
-    if (n > 0 && this.focusIdx !== null && info.phase !== "export") {
-      this.drawFocusOverlay(ctx, photos[this.focusIdx], info.images);
+    const isHover = this.hoverIdx === idx && !isExport;
+    const isFocus = this.focusIdx === idx && !isExport;
+    const wob = Math.sin(t * 1.9 + idx*1.1)*0.04;
+    const rot = (isHover? wob*1.6 : wob*0.9);
+    const hoverLift = isHover? -10*u : 0;
+
+    // record layout for hitTest (single rect at centre)
+    this.layoutCache = { layout: [{ rect: { x: cx, y: cy, w, h }, rot }], padW: w*0.12, padH: h*0.12, ts: performance.now() };
+    // but store single item at idx for hitTest - need map idx->rect ; for single, hitTest checks idx===0 only? we override hitTest to use first item regardless
+    // store idx mapping: simplest - keep layoutCache with one entry at centre, hitTest returns idx if inside
+    this.layoutCache = { layout: Array.from({length:n}, (_,i)=> ({ rect: i===idx ? {x:cx,y:cy,w,h} : {x:-9999,y:-9999,w:1,h:1}, rot:0 })), padW: w*0.08, padH: h*0.08, ts: performance.now() };
+
+    ctx.save();
+    ctx.translate(cx + slideX, cy + hoverLift);
+    ctx.rotate(rot);
+    ctx.globalAlpha = alpha;
+    // subtle shadow behind polaroid
+    ctx.shadowColor="rgba(0,0,0,0.45)"; ctx.shadowBlur=28*u; ctx.shadowOffsetY=10*u;
+    this.drawPolaroid(ctx, photo, 0, 0, w, h, u, idx, theme, info);
+    ctx.restore();
+
+    if (isFocus) {
+      this.drawFocusOverlay(ctx, photo, info.images);
     }
 
-    // progress dots bottom
+    // progress dots bottom (true centre, below photo)
     ctx.save();
     for (let i = 0; i < n; i++) {
-      const x = this.cx - (n - 1) * 9 * u + i * 18 * u;
+      const x = cx - (n - 1) * 10 * u + i * 20 * u;
       ctx.beginPath();
-      ctx.arc(x, this.H * 0.94, 5 * u, 0, Math.PI * 2);
-      ctx.fillStyle = theme.gold;
-      ctx.globalAlpha = 0.4 + 0.6 * Math.max(0, 1 - Math.abs(p * n - i));
+      ctx.arc(x, this.H*0.92, 5*u, 0, Math.PI*2);
+      ctx.fillStyle = i===idx ? theme.gold : theme.textSoft+"55";
+      ctx.globalAlpha = i===idx? 1:0.55;
       ctx.fill();
     }
     ctx.restore();
 
-    this.drawSparkles(ctx, t, 18, seededRng(card.id + "|phw"), { yy0: this.base * 0.1, yy1: this.H - this.base * 0.1, size: 8 * u });
+    this.drawSparkles(ctx, t, 14, seededRng(card.id + "|ph-single"), { yy0: this.base * 0.12, yy1: this.H - this.base*0.12, size: 8 * u });
   }
 
   // ---------- wall layout: adaptive grid of polaroids on ropes ----------
@@ -574,92 +696,103 @@ export class RakhiRenderer extends Renderer {
     this.motifBg(ctx, t);
     const u = this.base / 1080;
     const cx = this.cx;
-    const text = (card.message ?? "").trim();
-    const maxW = Math.min(this.W * 0.8, this.base * 0.78);
-
+    // faint huge quote in background for luxury
+    ctx.save(); ctx.globalAlpha = smoothstep(0.08,0.32,p)*0.07; ctx.font=`400 ${420*u}px 'Billion Dreams','Dancing Script',cursive`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=theme.gold; ctx.fillText("“", cx, this.H*0.46); ctx.restore();
     ctx.save();
-    ctx.translate(cx, this.H * 0.13);
-    ctx.globalAlpha = smoothstep(0, 0.1, p) * 0.98;
-    this.glowText(ctx, "A LITTLE NOTE", 0, 0, 38 * u, "'Jost', sans-serif", theme.accentSoft, {
-      blur: 14 * u,
-      letterSpacing: 10 * u,
-      weight: "700",
+    ctx.translate(cx, this.H * 0.18);
+    ctx.globalAlpha = smoothstep(0, 0.16, p) * 0.98;
+    this.glowText(ctx, "MY HEART SAYS", 0, 0, 42 * u, "'Billion Dreams','Dancing Script',cursive", theme.gold, {
+      blur: 18 * u,
+      weight: "400",
     });
+    // thin gold rule under header
+    ctx.save(); ctx.globalAlpha=smoothstep(0.12,0.28,p)*0.8; ctx.fillStyle=theme.gold; ctx.fillRect(-86*u, 22*u, 172*u, 1.8*u); ctx.restore();
     ctx.restore();
 
+    const text = (card.message ?? "").trim();
     if (!text) {
       ctx.save();
       ctx.translate(cx, this.H * 0.5);
       ctx.globalAlpha = smoothstep(0.15, 0.6, p);
-      this.glowText(ctx, "❤", 0, 0, 90 * u, "sans-serif", theme.gold, { blur: 30 * u });
+      this.glowText(ctx, "❤", 0, 0, 96 * u, "sans-serif", theme.gold, { blur: 30 * u });
       ctx.restore();
       return;
     }
-
-    const wrapW = maxW;
-    let fs = Math.min(52 * u, this.base * 0.048);
+    // big luxury message — Billion Dreams script huge, centred both axes
+    const maxW = Math.min(this.W * 0.86, this.base*0.92);
+    // auto-fit starting much bigger (72u) down to 38u
+    let fs = Math.min(74*u, this.base*0.068);
     const fit = (s: number) => {
-      const lns = this.wrapText(ctx, text, wrapW, s);
-      const hAll = lns.length * s * 1.5;
+      ctx.font = `400 ${s}px 'Billion Dreams','Dancing Script',cursive`;
+      const lns = this.wrapText(ctx, text, maxW, s, "'Billion Dreams','Dancing Script',cursive", "400");
+      const hAll = lns.length * s * 1.32;
       const wMax = Math.max(...lns.map((l) => ctx.measureText(l).width));
-      if (lns.length > 8 || hAll > this.H * 0.42 || wMax > wrapW) return null;
+      if (lns.length > 7 || hAll > this.H * 0.48 || wMax > maxW) return null;
       return { lns, s };
     };
     let fitted = fit(fs);
-    while (!fitted && fs > 26 * u) {
-      fs -= 2 * u;
+    while (!fitted && fs > 38*u) {
+      fs -= 2.2*u;
       fitted = fit(fs);
     }
     const lines = fitted!.lns;
     const fsz = fitted!.s;
-    const lineH = fsz * 1.5;
-    const y0 = this.H * 0.22;
+    const lineH = fsz * 1.32;
+    const totalH = lines.length*lineH;
+    const y0 = this.H*0.50 - totalH/2; // vertically centred!
 
-    const typedP = clamp01((p - 0.12) * 2.2);
+    const typedP = clamp01((p - 0.14) * 1.9);
     const typed = Math.floor(typedP * [...text].length);
 
     ctx.save();
-    ctx.font = `600 ${fsz}px 'Jost', sans-serif`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.textBaseline = "top" as CanvasTextBaseline;
-    ctx.fillStyle = theme.textSoft;
-    ctx.shadowColor = theme.accent;
-    ctx.shadowBlur = 14 * u;
-
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     let remaining = typed;
     for (let li = 0; li < lines.length; li++) {
-      const ly = y0 + li * lineH;
       const visible = lines[li].split("").reduce((acc, ch) => (remaining > 0 ? (remaining--, acc + ch) : acc), "");
-      const lineIn = smoothstep(0.1 + li * 0.04, 0.34 + li * 0.04, p);
+      const lineIn = smoothstep(0.12 + li * 0.05, 0.38 + li * 0.05, p);
+      const ly = y0 + li*lineH + lineH/2;
+      // gold foil highlight behind each line when typing
       ctx.save();
+      ctx.translate(cx, ly);
       ctx.globalAlpha = lineIn;
-      ctx.fillText(visible, cx - wrapW / 2, ly);
+      // subtle offset shadow for depth
+      ctx.shadowColor = "rgba(0,0,0,0.55)"; ctx.shadowBlur=22*u; ctx.shadowOffsetY=6*u;
+      // gradient gold for luxury
+      const g = ctx.createLinearGradient(-maxW/2,0,maxW/2,0);
+      g.addColorStop(0, theme.textSoft); g.addColorStop(0.5, "#fff7cc"); g.addColorStop(1, theme.textSoft);
+      ctx.fillStyle = g;
+      ctx.font = `400 ${fsz}px 'Billion Dreams','Dancing Script',cursive`;
+      ctx.fillText(visible, 0, 0);
       ctx.restore();
       if (li === lines.length - 1 && typed < [...text].length) {
-        const blink = Math.sin(t * 4) > 0 ? 1 : 0.1;
         const cxm = ctx.measureText(visible).width;
-        ctx.save();
-        ctx.fillStyle = theme.accent;
-        ctx.globalAlpha = lineIn * blink * 0.9;
-        ctx.fillText("▍", cx - wrapW / 2 + cxm + 2, ly);
+        const blink = Math.sin(t * 5) > 0 ? 1 : 0.16;
+        ctx.save(); ctx.translate(cx - maxW/2 + ctx.measureText(visible).width - maxW/2 + maxW/2, ly);
+        // actually simpler cursor at end of visible
+        ctx.font = `400 ${fsz}px 'Billion Dreams',cursive`;
+        const curX = ctx.measureText(visible).width/2; // approx
+        void curX; void cxm;
+        ctx.fillStyle = theme.gold; ctx.globalAlpha = lineIn * blink * 0.95;
+        // use line centre
+        ctx.textAlign="center"; ctx.fillText("▍", 0, 0);
         ctx.restore();
       }
     }
     ctx.restore();
 
-    if (typed >= [...text].length && p > 0.8) {
+    if (typed >= [...text].length && p > 0.78) {
       ctx.save();
-      ctx.globalAlpha = smoothstep(0.8, 1.0, p) * 0.9;
-      this.glowText(ctx, "❦", cx, y0 + (lines.length - 1) * lineH + 56 * u, 44 * u, "sans-serif", theme.gold, { blur: 22 * u });
+      ctx.globalAlpha = smoothstep(0.78, 0.96, p) * 0.92;
+      this.glowText(ctx, "— " + (card.senderName||"Your Brother") + "  ♥", cx, y0 + totalH + 46*u, 28*u, "'Jost',sans-serif", theme.accentSoft, { blur: 14*u, weight:"600" });
       ctx.restore();
     }
 
-    this.drawSparkles(ctx, t, 10, seededRng(card.id + "|msg"), { yy0: this.base * 0.2, yy1: this.H - this.base * 0.22, size: 8 * u });
+    this.drawSparkles(ctx, t, 12, seededRng(card.id + "|msg"), { yy0: this.base * 0.18, yy1: this.H - this.base * 0.18, size: 8 * u });
   }
 
-  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, fs: number): string[] {
-    ctx.font = `600 ${fs}px 'Jost', sans-serif`;
+  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, fs: number, family: string = "'Jost',sans-serif", weight: string = "600"): string[] {
+    ctx.font = `${weight} ${fs}px ${family}`;
     const words = text.split(/\s+/).filter(Boolean);
     const lines: string[] = [];
     let cur = "";

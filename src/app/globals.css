@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+@import url('https://fonts.cdnfonts.com/css/billion-dreams');
 @import "tailwindcss";
 
 :root {
@@ -17,6 +19,8 @@
   --font-rajdhani: var(--font-rajdhani);
   --font-jost: var(--font-jost);
   --font-dancing: var(--font-dancing);
+  --font-anton: var(--font-anton);
+  --font-billion: 'Billion Dreams', cursive;
 }
 
 html {

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import CardPlayer from "@/components/CardPlayer";
+import CardPlayer, { type CardPlayerHandle } from "@/components/CardPlayer";
 import { THEMES } from "@/engine/themes";
 import { canWebCodecs, exportVideo, mediaRecorderMime, type ExportRes } from "@/engine/export";
 import { preloadImage } from "@/engine/scenes";
+import { buildTimeline } from "@/engine/renderer";
 import { cardUrl } from "@/lib/utils";
 import type { CardData, AspectId } from "@/lib/types";
 
@@ -43,6 +44,11 @@ export default function PlayerClient({
   const [toast, setToast] = useState<Toast | null>(null);
   const [playerKey, setPlayerKey] = useState(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playerRef = useRef<CardPlayerHandle>(null);
+  const timeline = buildTimeline(card);
+  const hasPhotos = (card.photos?.length ?? 0) > 0;
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const [musicFile, setMusicFile] = useState<File | null | undefined>(undefined); // undefined=default, File=custom, null=no music
 
   const showToast = useCallback((text: string, tone: "success" | "error" = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -90,6 +96,7 @@ export default function PlayerClient({
         aspect,
         fps: 30,
         quality,
+        audioFile: musicFile,
         onProgress: (pct) => setProgress(pct),
       });
       const url = URL.createObjectURL(blob);
@@ -119,13 +126,49 @@ export default function PlayerClient({
     background: `linear-gradient(160deg, ${theme.bgDeep} 0%, ${theme.bg[0]} 45%, ${theme.bg[1]} 100%)`,
   };
 
+  // photo nav helpers
+  const photosCount = card.photos?.length ?? 0;
+  const photosScene = timeline.scenes[2];
+  const messageScene = timeline.scenes[3];
+  const seekToPhoto = (idx: number) => {
+    setPhotoIdx(idx);
+    const per = photosScene.duration / Math.max(1, photosCount);
+    const t = photosScene.start + idx * per + per * 0.5;
+    playerRef.current?.seek(t);
+  };
+  const handleNextPhoto = () => {
+    if (photoIdx < photosCount - 1) seekToPhoto(photoIdx + 1);
+  };
+  const handlePrevPhoto = () => {
+    if (photoIdx > 0) seekToPhoto(photoIdx - 1);
+  };
+  const handleContinueToMessage = () => {
+    playerRef.current?.seek(messageScene.start + 0.15);
+  };
+  const handleMusicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) setMusicFile(f);
+  };
+
   if (cleanMode) {
-    // ===== CLEAN: recipient-only. Pure magic, no controls. =====
     return (
       <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-black" style={bgStyle}>
         <div className="relative h-full w-full" style={{ aspectRatio: "auto" }}>
-          <CardPlayer card={card} aspect={aspect} autoplay loop replayKey={playerKey} interactive className="h-full w-full" />
+          <CardPlayer ref={playerRef} card={card} aspect={aspect} autoplay loop replayKey={playerKey} interactive photoIndex={hasPhotos ? photoIdx : null} className="h-full w-full" />
         </div>
+        {hasPhotos && (
+          <div className="pointer-events-none absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/15 bg-black/55 px-2 py-2 backdrop-blur-md">
+              <button onClick={handlePrevPhoto} disabled={photoIdx===0} className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white disabled:opacity-30">← Prev</button>
+              <span className="px-2 text-xs font-medium text-white/80">{photoIdx+1} / {photosCount}</span>
+              {photoIdx < photosCount-1 ? (
+                <button onClick={handleNextPhoto} className="rounded-full bg-gradient-to-r from-[#ffd97a] to-[#ff9d2e] px-5 py-2 text-sm font-bold text-[#2a0e04]">Next →</button>
+              ) : (
+                <button onClick={handleContinueToMessage} className="rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 px-5 py-2 text-sm font-bold text-white">Continue →</button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -153,7 +196,18 @@ export default function PlayerClient({
 
         <div className="relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 shadow-2xl shadow-black/50">
           <div className="relative w-full" style={{ aspectRatio: aspect.replace(":", "/") }}>
-            <CardPlayer key={playerKey} card={card} aspect={aspect} autoplay loop interactive replayKey={playerKey} className="h-full w-full" />
+            <CardPlayer ref={playerRef} key={playerKey} card={card} aspect={aspect} autoplay loop interactive replayKey={playerKey} photoIndex={hasPhotos ? photoIdx : null} className="h-full w-full" />
+            {hasPhotos && !rendering && (
+              <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/60 px-2 py-1.5 backdrop-blur-md">
+                <button onClick={handlePrevPhoto} disabled={photoIdx===0} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-30">←</button>
+                <span className="px-1 text-xs font-medium text-white/80">{photoIdx+1}/{photosCount}</span>
+                {photoIdx < photosCount-1 ? (
+                  <button onClick={handleNextPhoto} className="rounded-full bg-gradient-to-r from-[#ffd97a] to-[#ff9d2e] px-4 py-1.5 text-xs font-bold text-[#2a0e04]">Next →</button>
+                ) : (
+                  <button onClick={handleContinueToMessage} className="rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 px-4 py-1.5 text-xs font-bold text-white">Continue →</button>
+                )}
+              </div>
+            )}
             <AnimatePresence>
               {rendering && (
                 <motion.div
@@ -212,6 +266,13 @@ export default function PlayerClient({
                   <option value="1080" className="text-black">1080p</option>
                 </select>
               </label>
+
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-2.5 py-2 text-xs font-medium text-white transition hover:bg-white/15">
+                <input type="file" accept="audio/*" className="hidden" onChange={handleMusicUpload} />
+                <span>{musicFile ? `🎵 ${musicFile.name.slice(0,12)}…` : musicFile===null ? "🔇 No music" : "🎵 Phoolon Ka Taron"}</span>
+              </label>
+              <button onClick={()=> setMusicFile(null)} className={`rounded-xl px-2.5 py-2 text-[11px] font-medium ${musicFile===null? "bg-white/20 text-white":"bg-white/10 text-white/60"}`}>Mute</button>
+              <button onClick={()=> setMusicFile(undefined)} className={`rounded-xl px-2.5 py-2 text-[11px] font-medium ${musicFile===undefined? "bg-white/20 text-white":"bg-white/10 text-white/60"}`}>Default</button>
 
               <button
                 onClick={handleDownload}

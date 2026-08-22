@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { RakhiRenderer, imageCache } from "@/engine/scenes";
 import { ensureFonts } from "@/engine/fonts";
 import type { CardData, AspectId } from "@/lib/types";
+
+export interface CardPlayerHandle {
+  seek: (t: number) => void;
+  getTimeline: () => ReturnType<RakhiRenderer["timelineInfo"] extends infer T ? () => T : never>;
+}
 
 interface Props {
   card: CardData;
@@ -16,29 +21,36 @@ interface Props {
   aspect?: AspectId;
   /** change this to force a remount of the timeline (replay) */
   replayKey?: number;
+  /** when set, overrides which photo is shown in photos scene (0-based) */
+  photoIndex?: number | null;
 }
 
-export default function CardPlayer({
-  card,
-  themeId,
-  className,
-  autoplay = true,
-  loop = true,
-  onReady,
-  interactive = false,
-  aspect,
-  replayKey = 0,
-}: Props) {
-  const ref = useRef<HTMLCanvasElement>(null);
+const CardPlayer = forwardRef<CardPlayerHandle, Props>(function CardPlayer(
+  { card, themeId, className, autoplay = true, loop = true, onReady, interactive = false, aspect, replayKey = 0, photoIndex = null },
+  ref
+) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const cardRef = useRef(card);
   cardRef.current = card;
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
   const interactiveRef = useRef(interactive);
   interactiveRef.current = interactive;
+  const photoIndexRef = useRef<number | null>(photoIndex);
+  photoIndexRef.current = photoIndex;
+  const rendererRef = useRef<RakhiRenderer | null>(null);
+  const startRef = useRef<number | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    seek: (t: number) => {
+      // set start so that next tick's `el` equals t
+      startRef.current = performance.now() - t * 1000;
+    },
+    getTimeline: () => rendererRef.current?.timelineInfo as never,
+  }));
 
   useEffect(() => {
-    const canvas = ref.current;
+    const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -50,8 +62,8 @@ export default function CardPlayer({
     };
 
     const renderer = new RakhiRenderer(thisCard);
+    rendererRef.current = renderer;
     let raf = 0;
-    let start: number | null = null;
     let doneSent = false;
 
     const resize = () => {
@@ -66,15 +78,15 @@ export default function CardPlayer({
 
     const tick = (ms: number) => {
       raf = requestAnimationFrame(tick);
-      if (start === null) start = ms;
-      const el = (ms - start) / 1000;
+      if (startRef.current === null) startRef.current = ms;
+      const el = (ms - startRef.current) / 1000;
       const total = renderer.timelineInfo.total;
       const t = loop ? el % total : Math.min(el, total);
       if (!loop && !doneSent && el >= total) {
         doneSent = true;
         onReadyRef.current?.();
       }
-      renderer.render(ctx, { t, images: imageCache, fontReady: true, phase: "preview" });
+      renderer.render(ctx, { t, images: imageCache, fontReady: true, phase: "preview", photoIndex: photoIndexRef.current });
     };
 
     if (autoplay) {
@@ -125,9 +137,7 @@ export default function CardPlayer({
     };
   }, [themeId, autoplay, loop, aspect, replayKey]);
 
-  const cb = useCallback(() => {
-    void 0;
-  }, []);
+  return <canvas ref={canvasRef} className={className} style={{ width: "100%", height: "100%", display: "block" }} />;
+});
 
-  return <canvas ref={ref} className={className} style={{ width: "100%", height: "100%", display: "block" }} />;
-}
+export default CardPlayer;

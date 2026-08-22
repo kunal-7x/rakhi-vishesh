@@ -52,4 +52,6 @@ export interface RenderContext {
   fontReady: boolean;
   pointer?: { x: number; y: number } | null;
   focus?: number | null;
+  /** when set, overrides time-based photo index (preview manual carousel) */
+  photoIndex?: number | null;
 }

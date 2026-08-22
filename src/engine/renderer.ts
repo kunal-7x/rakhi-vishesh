@@ -29,7 +29,7 @@ export function buildTimeline(card: CardData): Timeline {
   const intro = 5.2;
   const names = 6.0;
   const photoCount = Math.max(0, card.photos.length);
-  const withPhotos = photoCount > 0 ? 3.4 + photoCount * 0.95 : 2.4;
+  const withPhotos = photoCount > 0 ? 2.2 + photoCount * 1.5 : 2.4;
   const message = Math.min(16, Math.max(5.0, 4.4 + card.message.length * 0.055));
   const finale = 9.0;
 

@@ -9,6 +9,8 @@ export interface ExportOptions {
   fps: number;
   quality: ExportRes;
   onProgress: (pct: number) => void;
+  /** File to use for audio. undefined = default Phoolon Ka Taron Ka, null = no music */
+  audioFile?: File | null;
 }
 
 export interface ExportResult {
@@ -48,6 +50,43 @@ async function loadImages(card: CardData): Promise<void> {
   }
 }
 
+async function loadAudioBuffer(source: File | string): Promise<AudioBuffer | null> {
+  try {
+    let arrayBuffer: ArrayBuffer;
+    if (source instanceof File) {
+      arrayBuffer = await source.arrayBuffer();
+    } else {
+      const res = await fetch(source);
+      if (!res.ok) return null;
+      arrayBuffer = await res.arrayBuffer();
+    }
+    const AudioCtx = (window as unknown as { AudioContext: typeof AudioContext; webkitAudioContext: typeof AudioContext }).AudioContext
+      || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return null;
+    const ctx = new AudioCtx();
+    const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    // close to free
+    try { await ctx.close(); } catch {}
+    return decoded;
+  } catch (e) {
+    console.warn("audio decode failed", e);
+    return null;
+  }
+}
+
+function interleaveAudio(audioBuffer: AudioBuffer, offset: number, length: number): Float32Array {
+  const channels = audioBuffer.numberOfChannels;
+  const out = new Float32Array(length * channels);
+  for (let ch = 0; ch < channels; ch++) {
+    const data = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      const srcIdx = (offset + i) % audioBuffer.length;
+      out[i * channels + ch] = data[srcIdx];
+    }
+  }
+  return out;
+}
+
 export async function exportVideo(card: CardData, opts: ExportOptions): Promise<ExportResult> {
   if (canWebCodecs()) {
     return exportMp4WebCodecs(card, opts);
@@ -76,11 +115,22 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
   const totalFrames = Math.ceil(totalSec * fps);
 
   await loadImages(card);
+  // decide audio source
+  let audioBuffer: AudioBuffer | null = null;
+  if (opts.audioFile !== null) {
+    const src: File | string = opts.audioFile ?? "/default-music.mp3";
+    audioBuffer = await loadAudioBuffer(src);
+  }
+  const hasAudio = !!audioBuffer && typeof AudioEncoder !== "undefined" && typeof AudioData !== "undefined";
+
   await document.fonts?.ready?.catch?.(() => undefined);
 
   const muxer = new Muxer({
     target: new ArrayBufferTarget(),
     video: { codec: "avc", width: w, height: h },
+    ...(hasAudio && audioBuffer
+      ? { audio: { codec: "aac", sampleRate: audioBuffer.sampleRate, numberOfChannels: audioBuffer.numberOfChannels } }
+      : {}),
     fastStart: "in-memory",
   });
 
@@ -104,6 +154,28 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
     }
   }
 
+  // set up audio encoder if we have audio
+  let audioEncoder: AudioEncoder | null = null;
+  if (hasAudio && audioBuffer) {
+    try {
+      audioEncoder = new AudioEncoder({
+        output: (chunk, meta) => {
+          muxer.addAudioChunk(chunk, meta);
+        },
+        error: (e) => console.error("audio encoder error", e),
+      });
+      audioEncoder.configure({
+        codec: "mp4a.40.2",
+        sampleRate: audioBuffer.sampleRate,
+        numberOfChannels: audioBuffer.numberOfChannels,
+        bitrate: 128000,
+      });
+    } catch (e) {
+      console.warn("audio encoder configure failed", e);
+      audioEncoder = null;
+    }
+  }
+
   const renderFrame = (sec: number) => {
     renderer.render(ctx, { t: sec, images: imageCache, fontReady: true, phase: "export" });
   };
@@ -116,10 +188,47 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
     while (encoder.encodeQueueSize > 4) {
       await new Promise((r) => setTimeout(r, 2));
     }
-    opts.onProgress(Math.round(((f + 1) / totalFrames) * 100));
+    // report 0..90 for video, reserve 90..100 for audio mux
+    const prog = hasAudio ? Math.round(((f + 1) / totalFrames) * 90) : Math.round(((f + 1) / totalFrames) * 100);
+    opts.onProgress(prog);
   }
 
   await encoder.flush();
+
+  // encode audio track (if any)
+  if (audioEncoder && audioBuffer) {
+    const sampleRate = audioBuffer.sampleRate;
+    const channels = audioBuffer.numberOfChannels;
+    const neededSamples = Math.ceil(totalSec * sampleRate);
+    const frameSize = 1024;
+    for (let offset = 0; offset < neededSamples; offset += frameSize) {
+      const frames = Math.min(frameSize, neededSamples - offset);
+      const timestamp = (offset * 1_000_000) / sampleRate;
+      const interleaved = interleaveAudio(audioBuffer, offset, frames);
+      const audioData = new AudioData({
+        format: "f32",
+        sampleRate,
+        numberOfFrames: frames,
+        numberOfChannels: channels,
+        timestamp,
+        data: interleaved as unknown as BufferSource,
+      });
+      audioEncoder.encode(audioData);
+      audioData.close();
+      while (audioEncoder.encodeQueueSize > 4) {
+        await new Promise((r) => setTimeout(r, 2));
+      }
+      // audio progress 90..100
+      const aProg = 90 + Math.round(((offset + frames) / neededSamples) * 10);
+      opts.onProgress(Math.min(100, aProg));
+    }
+    await audioEncoder.flush();
+    audioEncoder.close?.();
+  } else if (hasAudio === false && opts.audioFile !== null) {
+    // tried but failed — still finalize video
+    console.warn("audio not muxed — producing video-only");
+  }
+
   muxer.finalize();
   const { buffer } = muxer.target;
   return {

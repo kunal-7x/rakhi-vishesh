@@ -23,11 +23,18 @@ const ASPECTS: { id: AspectId; label: string; icon: string }[] = [
 ];
 
 /** ?clean=1 → recipient sees nothing but the magic. ?create=1 → +Create-your-own. default → creator mode. */
-export default function PlayerClient({ card }: { card: CardData }) {
+export default function PlayerClient({
+  card,
+  variant,
+  created,
+}: {
+  card: CardData;
+  variant: "clean" | "plain" | "create";
+  created: boolean;
+}) {
   const theme = THEMES[card.templateId];
-  const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const cleanMode = urlParams?.get("clean") === "1";
-  const createMode = urlParams?.get("create") === "1";
+  const cleanMode = variant === "clean";
+  const createMode = variant === "create";
 
   const [aspect, setAspect] = useState<AspectId>(card.aspect ?? "9:16");
   const [quality, setQuality] = useState<ExportRes>("1080");
@@ -53,13 +60,10 @@ export default function PlayerClient({ card }: { card: CardData }) {
   }, [card.id, cleanMode]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("created") === "1" && !cleanMode) {
-        setTimeout(() => showToast("Your card is live! Share it now ✨"), 600);
-      }
+    if (created && !cleanMode) {
+      setTimeout(() => showToast("Your card is live! Share it now ✨"), 600);
     }
-  }, [card.id, cleanMode, showToast]);
+  }, [card.id, cleanMode, created, showToast]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

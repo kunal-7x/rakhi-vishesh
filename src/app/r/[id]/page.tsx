@@ -54,8 +54,17 @@ function NotFoundHero({ status, message }: { status: number; message: string }) 
   );
 }
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ clean?: string; create?: string; created?: string }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const variant = sp.clean === "1" ? "clean" : sp.create === "1" ? "create" : "plain";
+  const created = sp.created === "1" ? 1 : 0;
 
   let res: Response;
   try {
@@ -80,5 +89,5 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     return <NotFoundHero status={404} message="" />;
   }
 
-  return <PlayerClient card={mapCard(data)} />;
+  return <PlayerClient card={mapCard(data)} variant={variant as "clean" | "create" | "plain"} created={!!created} />;
 }

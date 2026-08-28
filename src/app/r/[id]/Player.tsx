@@ -365,6 +365,19 @@ export default function PlayerClient({
                     aria-label="Song start time"
                   />
                   {songDuration > 0 && <span className="text-[10px] text-white/40">/ {fmtTime(songDuration)}</span>}
+                  <button
+                    onClick={() => {
+                      const a = audioRef.current;
+                      if (a && a.currentTime > 0) {
+                        setSongStartTime(Math.floor(a.currentTime));
+                        showToast(`Music will start from ${fmtTime(a.currentTime)} ✂️`);
+                      }
+                    }}
+                    className="rounded-lg bg-white/10 px-2 py-1 text-[10px] font-medium text-white/80 transition hover:bg-white/20"
+                    title="Set start from current playback position"
+                  >
+                    📍 Set Now
+                  </button>
                 </div>
               )}
 

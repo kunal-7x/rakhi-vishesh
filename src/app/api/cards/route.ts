@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
       aspect,
       photos,
       audio_enabled: false,
-      song_start_time: songStartTime,
     })
     .select("id, created_at")
     .single();

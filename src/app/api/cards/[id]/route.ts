@@ -33,6 +33,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     template_id: templateId,
     aspect,
     audio_enabled: data.audio_enabled,
+    songStartTime: typeof data.song_start_time === 'number' ? data.song_start_time : 0,
     photos: Array.isArray(data.photos) ? data.photos : [],
     views: data.views ?? 0,
     created_at: data.created_at,

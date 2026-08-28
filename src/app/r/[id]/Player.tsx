@@ -52,6 +52,14 @@ export default function PlayerClient({
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
+  const [songStartTime, setSongStartTime] = useState<number>(card.songStartTime ?? 0);
+  const [songDuration, setSongDuration] = useState<number>(0);
+
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
 
   const showToast = useCallback((text: string, tone: "success" | "error" = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -100,6 +108,7 @@ export default function PlayerClient({
         fps: 30,
         quality,
         audioFile: musicFile,
+        songStartTime,
         onProgress: (pct) => setProgress(pct),
       });
       const url = URL.createObjectURL(blob);
@@ -152,12 +161,17 @@ export default function PlayerClient({
     const f = e.target.files?.[0];
     if (f) {
       setMusicFile(f);
+      setSongStartTime(0);
       const url = URL.createObjectURL(f);
       setCustomAudioUrl(url);
       setIsMusicPlaying(false);
       setTimeout(() => {
         const a = audioRef.current;
-        if (a) { a.src = url; a.play().then(()=> setIsMusicPlaying(true)).catch(()=>{}); }
+        if (a) {
+          a.src = url;
+          a.currentTime = 0;
+          a.play().then(()=> setIsMusicPlaying(true)).catch(()=>{});
+        }
       }, 100);
     }
   };
@@ -175,13 +189,25 @@ export default function PlayerClient({
     a.src = "/default-music.mp3";
     a.volume = 0.72;
     a.loop = true;
-    const tryPlay = () => a.play().then(()=> setIsMusicPlaying(true)).catch(()=> setIsMusicPlaying(false));
+    const onMeta = () => { if (a.duration && isFinite(a.duration)) setSongDuration(a.duration); };
+    a.addEventListener("loadedmetadata", onMeta);
+    a.currentTime = songStartTime;
+    const tryPlay = () => { a.currentTime = songStartTime; a.play().then(()=> setIsMusicPlaying(true)).catch(()=> setIsMusicPlaying(false)); };
     const t = setTimeout(tryPlay, 900);
     const onFirstInteract = () => { if (a.paused) tryPlay(); window.removeEventListener("click", onFirstInteract); window.removeEventListener("touchstart", onFirstInteract); };
     window.addEventListener("click", onFirstInteract, {once:true});
     window.addEventListener("touchstart", onFirstInteract, {once:true});
-    return () => { clearTimeout(t); window.removeEventListener("click", onFirstInteract); window.removeEventListener("touchstart", onFirstInteract); };
-  }, [musicFile]);
+    return () => { clearTimeout(t); window.removeEventListener("click", onFirstInteract); window.removeEventListener("touchstart", onFirstInteract); a.removeEventListener("loadedmetadata", onMeta); };
+  }, [musicFile, songStartTime]);
+
+  // when songStartTime changes, seek the live preview audio
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a || musicFile === null) return;
+    if (!a.paused || !a.ended) {
+      a.currentTime = songStartTime;
+    }
+  }, [songStartTime]);
 
   const toggleMusic = () => {
     const a = audioRef.current;
@@ -324,6 +350,23 @@ export default function PlayerClient({
               <button onClick={()=> setMusicFile(null)} className={`rounded-xl px-2.5 py-2 text-[11px] font-medium ${musicFile===null? "bg-white/20 text-white":"bg-white/10 text-white/60"}`}>Mute</button>
               <button onClick={()=> setMusicFile(undefined)} className={`rounded-xl px-2.5 py-2 text-[11px] font-medium ${musicFile===undefined? "bg-white/20 text-white":"bg-white/10 text-white/60"}`}>Default</button>
               <button onClick={toggleMusic} className={`rounded-xl px-3 py-2 text-xs font-medium ${isMusicPlaying ? "bg-emerald-500/20 text-emerald-200 border border-emerald-500/30" : "bg-white/10 text-white/60 border border-white/15"}`}>{isMusicPlaying ? "🔊" : "🔇"}</button>
+
+              {musicFile !== null && (
+                <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
+                  <span className="text-[11px] font-medium text-white/70 whitespace-nowrap">⏱ Start {fmtTime(songStartTime)}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(1, songDuration || 356)}
+                    step={0.5}
+                    value={songStartTime}
+                    onChange={(e) => setSongStartTime(parseFloat(e.target.value))}
+                    className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-white/20 accent-[#ffd97a] sm:w-36"
+                    aria-label="Song start time"
+                  />
+                  {songDuration > 0 && <span className="text-[10px] text-white/40">/ {fmtTime(songDuration)}</span>}
+                </div>
+              )}
 
               <button
                 onClick={handleDownload}

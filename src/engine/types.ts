@@ -43,6 +43,8 @@ export interface CardData {
   photos: PhotoSpec[];
   aspect?: AspectId;
   accent?: "warm" | "cool" | "gold";
+  /** seconds into the song to start playback (preview + export) */
+  songStartTime?: number;
 }
 
 export interface RenderContext {

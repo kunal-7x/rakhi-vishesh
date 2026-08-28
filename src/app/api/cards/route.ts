@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   const templateId = String(body.templateId ?? "");
   if (!THEMES[templateId as keyof typeof THEMES]) errors.push("Invalid templateId");
   const aspect: AspectId = ASPECTS.includes(body.aspect as AspectId) ? (body.aspect as AspectId) : "9:16";
+  const songStartTime = Math.max(0, Math.min(300, Number(body.songStartTime) || 0));
 
   const photos: PhotoSpec[] = (Array.isArray(body.photos) ? body.photos : [])
     .slice(0, 12)
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
       aspect,
       photos,
       audio_enabled: false,
+      song_start_time: songStartTime,
     })
     .select("id, created_at")
     .single();

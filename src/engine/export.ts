@@ -11,6 +11,8 @@ export interface ExportOptions {
   onProgress: (pct: number) => void;
   /** File to use for audio. undefined = default Phoolon Ka Taron Ka, null = no music */
   audioFile?: File | null;
+  /** seconds into the audio to start playback from (0 = beginning) */
+  songStartTime?: number;
 }
 
 export interface ExportResult {
@@ -201,10 +203,12 @@ async function exportMp4WebCodecs(card: CardData, opts: ExportOptions): Promise<
     const channels = audioBuffer.numberOfChannels;
     const neededSamples = Math.ceil(totalSec * sampleRate);
     const frameSize = 1024;
+    // offset into the audio buffer by songStartTime seconds
+    const startSampleOffset = Math.round((opts.songStartTime ?? 0) * sampleRate);
     for (let offset = 0; offset < neededSamples; offset += frameSize) {
       const frames = Math.min(frameSize, neededSamples - offset);
       const timestamp = (offset * 1_000_000) / sampleRate;
-      const interleaved = interleaveAudio(audioBuffer, offset, frames);
+      const interleaved = interleaveAudio(audioBuffer, startSampleOffset + offset, frames);
       const audioData = new AudioData({
         format: "f32",
         sampleRate,

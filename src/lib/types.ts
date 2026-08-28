@@ -24,6 +24,8 @@ export interface CardData {
   photos: PhotoSpec[];
   aspect?: AspectId;
   accent?: "warm" | "cool" | "gold";
+  /** seconds into the song to start playback (preview + export) */
+  songStartTime?: number;
 }
 
 export interface CardRecord {
@@ -34,6 +36,7 @@ export interface CardRecord {
   template_id: ThemeId;
   aspect?: AspectId;
   audio_enabled: boolean;
+  song_start_time: number;
   photos: PhotoSpec[];
   views: number;
   created_at: string;
@@ -47,4 +50,5 @@ export interface CreateCardInput {
   templateId: ThemeId;
   aspect: AspectId;
   photos: PhotoSpec[];
+  songStartTime?: number;
 }

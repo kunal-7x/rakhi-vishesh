@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Rajdhani, Jost, Dancing_Script, Anton } from "next/font/google";
+import { Rajdhani, Jost, Dancing_Script, Anton, Yatra_One } from "next/font/google";
 import "./globals.css";
 
 const rajdhani = Rajdhani({
@@ -26,6 +26,12 @@ const anton = Anton({
   weight: ["400"],
 });
 
+const yatraOne = Yatra_One({
+  variable: "--font-yatra",
+  subsets: ["latin", "devanagari"],
+  weight: ["400"],
+});
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
@@ -45,7 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${rajdhani.variable} ${jost.variable} ${dancing.variable} ${anton.variable} h-full antialiased`}
+      className={`${rajdhani.variable} ${jost.variable} ${dancing.variable} ${anton.variable} ${yatraOne.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#1a0803] text-[#fff6e9]">{children}</body>
     </html>

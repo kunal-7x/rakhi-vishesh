@@ -26,8 +26,8 @@ export interface Timeline {
 }
 
 export function buildTimeline(card: CardData): Timeline {
-  const intro = 5.2;
-  const names = 6.0;
+  const intro = 7.5;
+  const names = 4.5;
   const photoCount = Math.max(0, card.photos.length);
   const withPhotos = photoCount > 0 ? 2.2 + photoCount * 1.5 : 2.4;
   const message = Math.min(16, Math.max(5.0, 4.4 + card.message.length * 0.055));

@@ -154,66 +154,62 @@ export class RakhiRenderer extends Renderer {
     this.drawSparkles(ctx, t, 14, seededRng(this.cardData.id + "|intro-dust"), { yy0: this.base * 0.12, yy1: this.H - this.base * 0.18, size: 6 * u });
 
     // realistic rakhi behind title, grows as doors open
-    const rakhiReveal = smoothstep(0.42,0.78,p);
+    const rakhiReveal = smoothstep(0.34,0.72,p);
     if(rakhiReveal>0.01){
       ctx.save(); ctx.globalAlpha=rakhiReveal;
       const s = (0.9 + rakhiReveal*0.22 + Math.sin(t*0.7)*0.02)* (this.base/1080*1.08);
-      this.drawRealisticRakhi(ctx, cx, cy - 74*u, s, t);
+      this.drawRealisticRakhi(ctx, cx, cy - 82*u, s, t);
       ctx.restore();
     }
 
-    // title: typewriter after doors open — premium gold foil Anton, much bigger as requested
+    // title: typewriter after doors open — premium gold foil Anton, much bigger
     const title = "HAPPY RAKSHA BANDHAN";
-    const ts = 132 * u;
-    const titleProg = clamp01((p - 0.62) / 0.32);
+    const ts = 158 * u;
+    const titleProg = clamp01((p - 0.44) / 0.34);
     const typedLen = Math.floor(titleProg * title.length);
     const tg = ctx.createLinearGradient(cx- this.W*0.42, cy, cx+ this.W*0.42, cy);
     tg.addColorStop(0,"#7a4a08"); tg.addColorStop(0.22, theme.gold); tg.addColorStop(0.5,"#fff8d6"); tg.addColorStop(0.78, theme.gold); tg.addColorStop(1,"#7a4a08");
     ctx.save();
-    ctx.translate(cx, cy + 68*u);
+    ctx.translate(cx, cy + 74*u);
     ctx.font = `400 ${ts}px 'Anton','Arial Black',sans-serif`;
     ctx.textAlign="center"; ctx.textBaseline="middle";
-    // measure full for centering
     const visible = title.slice(0, typedLen);
     const fullW = ctx.measureText(title).width;
     const visW = ctx.measureText(visible).width;
-    // draw typed part with gold foil + depth
-    ctx.shadowColor="#000"; ctx.shadowBlur=18*u; ctx.shadowOffsetY=6*u;
-    ctx.strokeStyle="#3a1f06"; ctx.lineWidth=9*u; ctx.strokeText(visible, 0, 0);
+    ctx.shadowColor="#000"; ctx.shadowBlur=22*u; ctx.shadowOffsetY=7*u;
+    ctx.strokeStyle="#3a1f06"; ctx.lineWidth=10*u; ctx.strokeText(visible, 0, 0);
     ctx.fillStyle=tg; ctx.fillText(visible, 0,0);
-    // cursor blink
     if(titleProg>0.04 && titleProg<0.99){
       const blink = Math.sin(t*7)>0 ? 1 : 0.18;
       const cursorX = -fullW/2 + visW + 6*u;
-      ctx.save(); ctx.globalAlpha=blink; ctx.fillStyle=theme.gold; ctx.fillRect(cursorX, -ts*0.44, 4.5*u, ts*0.88); ctx.restore();
+      ctx.save(); ctx.globalAlpha=blink; ctx.fillStyle=theme.gold; ctx.fillRect(cursorX, -ts*0.44, 5*u, ts*0.88); ctx.restore();
     }
     ctx.restore();
-    // faint remaining ghost
     if(typedLen < title.length){
       const remaining = title.slice(typedLen);
-      ctx.save(); ctx.translate(cx, cy+68*u); ctx.font=`400 ${ts}px 'Anton','Arial Black',sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.save(); ctx.translate(cx, cy+74*u); ctx.font=`400 ${ts}px 'Anton','Arial Black',sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
       ctx.globalAlpha=0.13; ctx.fillStyle=theme.text; const ghostW = ctx.measureText(visible).width; ctx.fillText(remaining, ghostW/2 + (ctx.measureText(remaining).width/2 - visW/2 + (visW? 4*u:0)),0); ctx.restore();
     }
 
-    // script tagline - typewriter as well, Billion Dreams bigger
+    // script tagline - typewriter, Billion Dreams much bigger
     const tag = "· the thread that binds us ·";
-    const tagProg = clamp01((p - 0.78)/0.20);
+    const tagProg = clamp01((p - 0.72)/0.22);
     const tagLen = Math.floor(tagProg * tag.length);
     ctx.save();
     ctx.globalAlpha = tagProg>0? 0.96:0;
-    this.glowText(ctx, tag.slice(0, tagLen), cx, cy + 168 * u, 52 * u, "'Billion Dreams', 'Dancing Script', cursive", theme.text, {
-      blur: 22 * u,
+    this.glowText(ctx, tag.slice(0, tagLen), cx, cy + 190 * u, 62 * u, "'Billion Dreams', 'Dancing Script', cursive", theme.text, {
+      blur: 26 * u,
       weight: "400",
     });
-    if(tagProg>0.05 && tagProg<0.99){ const b=Math.sin(t*6)>0?1:0.2; ctx.save(); ctx.globalAlpha=b*0.9; ctx.fillStyle=theme.gold; ctx.fillRect(cx + ctx.measureText(tag.slice(0,tagLen)).width/2 - ctx.measureText(tag).width/2 + 8*u, cy+168*u -18*u, 3*u, 36*u); ctx.restore(); }
+    if(tagProg>0.05 && tagProg<0.99){ const b=Math.sin(t*6)>0?1:0.2; ctx.save(); ctx.globalAlpha=b*0.9; ctx.fillStyle=theme.gold; ctx.fillRect(cx + ctx.measureText(tag.slice(0,tagLen)).width/2 - ctx.measureText(tag).width/2 + 8*u, cy+190*u -22*u, 3.5*u, 44*u); ctx.restore(); }
     ctx.restore();
 
     // palace doors sliding open on top (premium entrance)
     this.drawLuxuryDoors(ctx, t, p, u);
 
     // extra sparkle burst as doors open
-    if(p>0.45 && p<0.78){
-      const b = smoothstep(0.45,0.58,p)*(1-smoothstep(0.68,0.78,p));
+    if(p>0.40 && p<0.78){
+      const b = smoothstep(0.40,0.54,p)*(1-smoothstep(0.68,0.78,p));
       ctx.save(); ctx.globalAlpha=b; this.drawSparkles(ctx, t, 18, seededRng(this.cardData.id + "|door-burst"), { yy0: this.H*0.32, yy1: this.H*0.58, size: 12 * u }); ctx.restore();
     }
   }
@@ -228,7 +224,6 @@ export class RakhiRenderer extends Renderer {
     this.motifBg(ctx, t);
     const cx = this.cx;
     const u = this.base / 1080;
-    const baseT = t; void baseT;
 
     // luxurious swirl mandala behind
     ctx.save();
@@ -237,32 +232,33 @@ export class RakhiRenderer extends Renderer {
     ctx.strokeStyle = theme.gold;
     ctx.lineWidth = 1.8*u;
     for(let i=0;i<2;i++){ const r=(220+i*96)*u; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke(); }
-    // rotating jewels
     for(let i=0;i<10;i++){ const ang=i/10*Math.PI*2 + t*0.5; const r=220*u + (i%2?96*u:0); const x=Math.cos(ang)*r, y=Math.sin(ang)*r; ctx.fillStyle=i%3?theme.gold:theme.accent; ctx.shadowColor=theme.gold; ctx.shadowBlur=12*u; ctx.beginPath(); ctx.arc(x,y,5.5*u,0,Math.PI*2); ctx.fill(); }
     ctx.restore();
 
-    // --- FOR label + RECIPIENT typewriter (Billion Dreams script for label, Anton huge for name) ---
-    const labelToA = smoothstep(0.02,0.18,p);
-    if(labelToA>0){
-      ctx.save(); ctx.translate(cx, this.H*0.30); ctx.globalAlpha=labelToA;
-      this.glowText(ctx, "FOR MY BELOVED", 0, 0, 42*u, "'Billion Dreams','Dancing Script',cursive", theme.text, {blur:18*u, weight:"400"});
+    // --- STAGGERED: FOR → Name → from → Sender (smooth appear one by one) ---
+
+    // 1. "FOR MY BELOVED" — fade in first, biggest script
+    const labelA = smoothstep(0.02, 0.16, p);
+    if(labelA > 0){
+      ctx.save(); ctx.translate(cx, this.H*0.26); ctx.globalAlpha = labelA;
+      this.glowText(ctx, "FOR MY BELOVED", 0, 0, 50*u, "'Yatra One','Billion Dreams','Dancing Script',cursive", theme.text, {blur:20*u, weight:"400"});
       ctx.restore();
     }
-    // recipient typewriter - premium luxury Anton gold foil, much bigger
+
+    // 2. Recipient name — typewriter with gold foil, HUGE
     {
       const name = card.recipientName || "Sister";
-      const start=0.12, dur=0.28;
+      const start=0.10, dur=0.32;
       const prog = clamp01((p - start)/dur);
       const chars = [...name];
       const typed = Math.floor(prog * chars.length);
-      const ts = clampMinMax(168*u - Math.min(64*u, name.length*3.2*u), 88*u, 168*u);
-      // gold foil gradient
-      const grad = ctx.createLinearGradient(cx-320*u,0,cx+320*u,0);
+      const ts = clampMinMax(198*u - Math.min(72*u, name.length*3.6*u), 98*u, 198*u);
+      const grad = ctx.createLinearGradient(cx-340*u,0,cx+340*u,0);
       grad.addColorStop(0, theme.gold); grad.addColorStop(0.5, "#fff7cc"); grad.addColorStop(1, theme.gold);
-      ctx.save(); ctx.translate(cx, this.H*0.42);
-      // underline luxury rule appears with name
-      const ruleA = smoothstep(0.42,0.62,p);
-      if(ruleA>0){ ctx.save(); ctx.globalAlpha=ruleA*0.9; ctx.strokeStyle=theme.gold; ctx.lineWidth=2.2*u; ctx.beginPath(); ctx.moveTo(-260*u, 62*u); ctx.lineTo(260*u,62*u); ctx.stroke(); ctx.restore(); }
+      ctx.save(); ctx.translate(cx, this.H*0.40);
+      // underline luxury rule
+      const ruleA = smoothstep(0.38,0.56,p);
+      if(ruleA>0){ ctx.save(); ctx.globalAlpha=ruleA*0.9; ctx.strokeStyle=theme.gold; ctx.lineWidth=2.6*u; ctx.beginPath(); ctx.moveTo(-280*u, 68*u); ctx.lineTo(280*u,68*u); ctx.stroke(); ctx.restore(); }
       ctx.font = `400 ${ts}px 'Anton','Arial Black',sans-serif`;
       ctx.textAlign="center"; ctx.textBaseline="middle";
       let accW=0; const widths=chars.map(c=>ctx.measureText(c).width);
@@ -273,51 +269,52 @@ export class RakhiRenderer extends Renderer {
         if(a<=0){ curX+=widths[i]+4*u; continue; }
         ctx.save(); ctx.translate(curX+widths[i]/2, 0);
         ctx.globalAlpha=a;
-        ctx.shadowColor="#000"; ctx.shadowBlur=18*u; ctx.shadowOffsetY=5*u;
-        ctx.strokeStyle="#3a1f06"; ctx.lineWidth=7*u; ctx.strokeText(chars[i],0,0);
+        ctx.shadowColor="#000"; ctx.shadowBlur=20*u; ctx.shadowOffsetY=6*u;
+        ctx.strokeStyle="#3a1f06"; ctx.lineWidth=8*u; ctx.strokeText(chars[i],0,0);
         ctx.fillStyle=grad; ctx.fillText(chars[i],0,0);
         ctx.restore();
         curX+=widths[i]+4*u;
       }
-      // cursor
       if(prog<1 && prog>0.06){
-        const cx2 = (()=>{ let x=-totalW/2; for(let k=0;k<typed;k++) x+=widths[k]+4*u; return x; })();
-        const blink = Math.sin(t*6)>0?1:0.12; ctx.save(); ctx.translate(curX - (typed<chars.length? widths[typed]||0:0)/2 - 2*u, 0); ctx.globalAlpha=blink; ctx.fillStyle=theme.accent; ctx.fillRect(cx2, -ts*0.42, 3.5*u, ts*0.84); ctx.restore();
-        void cx2;
+        const cursorX = curX - (typed<chars.length? widths[typed]||0:0)/2 - 2*u;
+        const blink = Math.sin(t*6)>0?1:0.12; ctx.save(); ctx.globalAlpha=blink; ctx.fillStyle=theme.accent; ctx.fillRect(cursorX, -ts*0.42, 4*u, ts*0.84); ctx.restore();
       }
       ctx.restore();
     }
 
     this.drawSparkles(ctx, t, 22, seededRng(card.id + "|names"), { yy0: this.base * 0.24, yy1: this.H - this.base * 0.2, size: 9 * u });
 
-    // --- FROM + SENDER typewriter second half ---
-    const fromProg = clamp01((p - 0.56)/0.30);
-    if(fromProg>0.01){
-      const fcA = smoothstep(0.54,0.66,p);
-      ctx.save(); ctx.translate(cx, this.H*0.62); ctx.globalAlpha=fcA;
-      this.glowText(ctx, "from", 0, -62*u, 44*u, "'Billion Dreams','Dancing Script',cursive", theme.accentSoft, { blur: 16*u, weight:"400" });
+    // 3. "from" — fade in after name is mostly done
+    const fromLabelA = smoothstep(0.42, 0.56, p);
+    if(fromLabelA > 0.01){
+      ctx.save(); ctx.translate(cx, this.H*0.60); ctx.globalAlpha=fromLabelA;
+      this.glowText(ctx, "from", 0, -68*u, 52*u, "'Yatra One','Billion Dreams','Dancing Script',cursive", theme.accentSoft, { blur: 18*u, weight:"400" });
       ctx.restore();
+    }
+
+    // 4. Sender name — typewriter with bounce, BIG
+    const fromProg = clamp01((p - 0.46)/0.34);
+    if(fromProg > 0.01){
       const sName = card.senderName || "Your Brother";
       const sChars=[...sName]; const sTyped=Math.floor(fromProg * sChars.length);
-      const sTs = clampMinMax(92*u - Math.min(28*u, sName.length*1.8*u), 62*u, 92*u);
-      const sGrad = ctx.createLinearGradient(cx-220*u,0,cx+220*u,0);
+      const sTs = clampMinMax(108*u - Math.min(32*u, sName.length*2.0*u), 68*u, 108*u);
+      const sGrad = ctx.createLinearGradient(cx-240*u,0,cx+240*u,0);
       sGrad.addColorStop(0,"#ffedd5"); sGrad.addColorStop(0.5, theme.text); sGrad.addColorStop(1,"#ffedd5");
       ctx.save(); ctx.translate(cx, this.H*0.70);
-      ctx.font=`400 ${sTs}px 'Billion Dreams','Dancing Script',cursive`;
+      ctx.font=`400 ${sTs}px 'Yatra One','Billion Dreams','Dancing Script',cursive`;
       ctx.textAlign="center"; ctx.textBaseline="middle";
       let acc=0; const sw = sChars.map(c=>ctx.measureText(c).width); const sTotal=sw.reduce((a,b)=>a+b,0)+(sChars.length-1)*2*u;
       let sx=-sTotal/2;
       for(let i=0;i<sChars.length;i++){
         const a=i < sTyped ? 1 : (i===sTyped? (Math.sin(t*7)>0?1:0.3):0);
         if(a<=0){ sx+=sw[i]+2*u; continue; }
-        ctx.save(); ctx.translate(sx+sw[i]/2, (1-easeOutBack(a))*18*u);
-        ctx.globalAlpha=a; ctx.shadowColor=theme.accent; ctx.shadowBlur=14*u;
+        ctx.save(); ctx.translate(sx+sw[i]/2, (1-easeOutBack(a))*20*u);
+        ctx.globalAlpha=a; ctx.shadowColor=theme.accent; ctx.shadowBlur=16*u;
         ctx.fillStyle=sGrad; ctx.fillText(sChars[i],0,0);
         ctx.restore(); sx+=sw[i]+2*u;
       }
       ctx.restore();
-      // tiny sparkle under sender
-      if(fromProg>0.72){ ctx.save(); ctx.globalAlpha=smoothstep(0.72,0.92,fromProg); this.glowText(ctx,"❦", cx, this.H*0.80, 36*u, "sans-serif", theme.gold,{blur:16*u}); ctx.restore(); }
+      if(fromProg>0.72){ ctx.save(); ctx.globalAlpha=smoothstep(0.72,0.92,fromProg); this.glowText(ctx,"❦", cx, this.H*0.82, 40*u, "sans-serif", theme.gold,{blur:18*u}); ctx.restore(); }
     }
     this.drawSparkles(ctx, t, 10, seededRng(card.id + "|ns2"), { yy0: this.base * 0.1, yy1: this.H - this.base * 0.1, size: 6 * u });
   }
@@ -696,12 +693,12 @@ export class RakhiRenderer extends Renderer {
     const u = this.base / 1080;
     const cx = this.cx;
     // faint huge quote in background for luxury
-    ctx.save(); ctx.globalAlpha = smoothstep(0.08,0.32,p)*0.07; ctx.font=`400 ${420*u}px 'Billion Dreams','Dancing Script',cursive`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=theme.gold; ctx.fillText("“", cx, this.H*0.46); ctx.restore();
+    ctx.save(); ctx.globalAlpha = smoothstep(0.08,0.32,p)*0.07; ctx.font=`400 ${480*u}px 'Yatra One','Billion Dreams','Dancing Script',cursive`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle=theme.gold; ctx.fillText("\u201C", cx, this.H*0.46); ctx.restore();
     ctx.save();
     ctx.translate(cx, this.H * 0.18);
     ctx.globalAlpha = smoothstep(0, 0.16, p) * 0.98;
-    this.glowText(ctx, "MY HEART SAYS", 0, 0, 42 * u, "'Billion Dreams','Dancing Script',cursive", theme.gold, {
-      blur: 18 * u,
+    this.glowText(ctx, "MY HEART SAYS", 0, 0, 50 * u, "'Yatra One','Billion Dreams','Dancing Script',cursive", theme.gold, {
+      blur: 20 * u,
       weight: "400",
     });
     // thin gold rule under header
@@ -719,18 +716,18 @@ export class RakhiRenderer extends Renderer {
     }
     // big luxury message — Billion Dreams script huge, centred both axes
     const maxW = Math.min(this.W * 0.86, this.base*0.92);
-    // auto-fit starting much bigger (72u) down to 38u
-    let fs = Math.min(74*u, this.base*0.068);
+    // auto-fit starting much bigger (88u) down to 46u
+    let fs = Math.min(88*u, this.base*0.078);
     const fit = (s: number) => {
-      ctx.font = `400 ${s}px 'Billion Dreams','Dancing Script',cursive`;
-      const lns = this.wrapText(ctx, text, maxW, s, "'Billion Dreams','Dancing Script',cursive", "400");
+      ctx.font = `400 ${s}px 'Yatra One','Billion Dreams','Dancing Script',cursive`;
+      const lns = this.wrapText(ctx, text, maxW, s, "'Yatra One','Billion Dreams','Dancing Script',cursive", "400");
       const hAll = lns.length * s * 1.32;
       const wMax = Math.max(...lns.map((l) => ctx.measureText(l).width));
       if (lns.length > 7 || hAll > this.H * 0.48 || wMax > maxW) return null;
       return { lns, s };
     };
     let fitted = fit(fs);
-    while (!fitted && fs > 38*u) {
+    while (!fitted && fs > 46*u) {
       fs -= 2.2*u;
       fitted = fit(fs);
     }
@@ -761,15 +758,14 @@ export class RakhiRenderer extends Renderer {
       const g = ctx.createLinearGradient(-maxW/2,0,maxW/2,0);
       g.addColorStop(0, theme.textSoft); g.addColorStop(0.5, "#fff7cc"); g.addColorStop(1, theme.textSoft);
       ctx.fillStyle = g;
-      ctx.font = `400 ${fsz}px 'Billion Dreams','Dancing Script',cursive`;
+      ctx.font = `400 ${fsz}px 'Yatra One','Billion Dreams','Dancing Script',cursive`;
       ctx.fillText(visible, 0, 0);
       ctx.restore();
       if (li === lines.length - 1 && typed < [...text].length) {
         const cxm = ctx.measureText(visible).width;
         const blink = Math.sin(t * 5) > 0 ? 1 : 0.16;
         ctx.save(); ctx.translate(cx - maxW/2 + ctx.measureText(visible).width - maxW/2 + maxW/2, ly);
-        // actually simpler cursor at end of visible
-        ctx.font = `400 ${fsz}px 'Billion Dreams',cursive`;
+        ctx.font = `400 ${fsz}px 'Yatra One','Billion Dreams',cursive`;
         const curX = ctx.measureText(visible).width/2; // approx
         void curX; void cxm;
         ctx.fillStyle = theme.gold; ctx.globalAlpha = lineIn * blink * 0.95;
@@ -783,7 +779,7 @@ export class RakhiRenderer extends Renderer {
     if (typed >= [...text].length && p > 0.78) {
       ctx.save();
       ctx.globalAlpha = smoothstep(0.78, 0.96, p) * 0.92;
-      this.glowText(ctx, "— " + (card.senderName||"Your Brother") + "  ♥", cx, y0 + totalH + 46*u, 28*u, "'Jost',sans-serif", theme.accentSoft, { blur: 14*u, weight:"600" });
+      this.glowText(ctx, "— " + (card.senderName||"Your Brother") + "  \u2665", cx, y0 + totalH + 52*u, 34*u, "'Jost',sans-serif", theme.accentSoft, { blur: 16*u, weight:"600" });
       ctx.restore();
     }
 
@@ -821,7 +817,7 @@ export class RakhiRenderer extends Renderer {
     const cx = this.cx;
     const cy = this.H * 0.42;
 
-    const ringR = (300 * u) + Math.sin(t * 1.1) * 6 * u;
+    const ringR = (340 * u) + Math.sin(t * 1.1) * 6 * u;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(t * 0.12);
@@ -853,19 +849,19 @@ export class RakhiRenderer extends Renderer {
     ctx.translate(cx, cy);
     ctx.globalAlpha = bigIn;
     ctx.rotate((1 - bigIn) * 0.04);
-    const ts = 68 * u;
+    const ts = 82 * u;
     ctx.font = `900 ${ts}px 'Rajdhani', 'Arial Black', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowColor = theme.accent;
-    ctx.shadowBlur = 44 * u;
+    ctx.shadowBlur = 48 * u;
     ctx.fillStyle = theme.text;
-    ctx.fillText("HAPPY RAKSHA", 0, -60 * u);
-    ctx.fillText("BANDHAN!", 0, 34 * u);
+    ctx.fillText("HAPPY RAKSHA", 0, -72 * u);
+    ctx.fillText("BANDHAN!", 0, 40 * u);
     ctx.shadowBlur = 0;
-    ctx.font = `700 ${50 * u}px 'Dancing Script', cursive`;
+    ctx.font = `700 ${62 * u}px 'Yatra One','Dancing Script', cursive`;
     ctx.fillStyle = theme.accentSoft;
-    ctx.fillText((card.recipientName ?? "Sister") + " ♥", 0, (0.13 * this.base / u) * u + 0, Math.min(cx * 2 - 100, this.W * 0.7));
+    ctx.fillText((card.recipientName ?? "Sister") + " \u2665", 0, (0.13 * this.base / u) * u + 0, Math.min(cx * 2 - 100, this.W * 0.7));
     ctx.restore();
 
     if (p > 0.5) {
